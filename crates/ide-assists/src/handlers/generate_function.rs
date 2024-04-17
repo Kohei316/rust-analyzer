@@ -2765,18 +2765,18 @@ fn main() {
             r"
 enum Foo {}
 fn main() {
-    Foo::new$0();
+    Foo::bar$0();
 }
 ",
             r"
 enum Foo {}
 impl Foo {
-    fn new() ${0:-> _} {
+    fn bar() ${0:-> _} {
         todo!()
     }
 }
 fn main() {
-    Foo::new();
+    Foo::bar();
 }
 ",
         )
