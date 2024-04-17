@@ -75,7 +75,8 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
         }
     }
 
-    let function_builder = FunctionBuilder::from_call(ctx, &call, fn_name, target_module, target)?;
+    let function_builder =
+        FunctionBuilder::from_call(ctx, &call, fn_name, target_module, target, adt_name.is_some())?;
     let text_range = call.syntax().text_range();
     let label = format!("Generate {} function", function_builder.fn_name);
     add_func_to_accumulator(acc, ctx, text_range, function_builder, file, adt_name, label)
@@ -226,7 +227,10 @@ impl FunctionBuilder {
         fn_name: &str,
         target_module: Option<Module>,
         target: GeneratedFunctionTarget,
+        adt_function: bool,
     ) -> Option<Self> {
+        let build_as_new_function = adt_function && fn_name == "new";
+
         let target_module =
             target_module.or_else(|| ctx.sema.scope(target.syntax()).map(|it| it.module()))?;
 
@@ -245,8 +249,11 @@ impl FunctionBuilder {
         let is_async = await_expr.is_some();
 
         let expr_for_ret_ty = await_expr.map_or_else(|| call.clone().into(), |it| it.into());
-        let (ret_type, should_focus_return_type) =
-            make_return_type(ctx, &expr_for_ret_ty, target_module, &mut necessary_generic_params);
+        let (ret_type, should_focus_return_type) = if build_as_new_function {
+            (Some(make::ret_type(make::ty_path(make::ext::ident_path("Self")))), false)
+        } else {
+            make_return_type(ctx, &expr_for_ret_ty, target_module, &mut necessary_generic_params)
+        };
 
         let (generic_param_list, where_clause) =
             fn_generic_params(ctx, necessary_generic_params, &target)?;
@@ -2913,15 +2920,14 @@ pub struct Foo {
     field_1: usize,
     field_2: String,
 }
-
 impl Foo {
-    fn new() -> ${0:-> Self} {
-        todo!()
+    fn new() -> Self {
+        ${0:todo!()}
     }
 }
 
 fn main() {
-    let foo = Foo::new$0();
+    let foo = Foo::new();
 }
         ",
         )
