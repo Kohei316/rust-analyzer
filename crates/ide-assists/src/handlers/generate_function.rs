@@ -15,8 +15,8 @@ use itertools::Itertools;
 use stdx::to_lower_snake_case;
 use syntax::{
     ast::{
-        self, edit::IndentLevel, edit_in_place::Indent, make, AstNode, CallExpr, HasArgList,
-        HasGenericParams, HasModuleItem, HasTypeBounds,
+        self, edit::IndentLevel, edit_in_place::Indent, make, AstNode, BlockExpr, CallExpr,
+        HasArgList, HasGenericParams, HasModuleItem, HasTypeBounds,
     },
     ted, SyntaxKind, SyntaxNode, TextRange, T,
 };
@@ -210,6 +210,7 @@ struct FunctionBuilder {
     generic_param_list: Option<ast::GenericParamList>,
     where_clause: Option<ast::WhereClause>,
     params: ast::ParamList,
+    fn_body: BlockExpr,
     ret_type: Option<ast::RetType>,
     should_focus_return_type: bool,
     visibility: Visibility,
@@ -250,12 +251,16 @@ impl FunctionBuilder {
         let (generic_param_list, where_clause) =
             fn_generic_params(ctx, necessary_generic_params, &target)?;
 
+        let placeholder_expr = make::ext::expr_todo();
+        let fn_body = make::block_expr(vec![], Some(placeholder_expr));
+
         Some(Self {
             target,
             fn_name,
             generic_param_list,
             where_clause,
             params,
+            fn_body,
             ret_type,
             should_focus_return_type,
             visibility,
@@ -294,12 +299,16 @@ impl FunctionBuilder {
         let (generic_param_list, where_clause) =
             fn_generic_params(ctx, necessary_generic_params, &target)?;
 
+        let placeholder_expr = make::ext::expr_todo();
+        let fn_body = make::block_expr(vec![], Some(placeholder_expr));
+
         Some(Self {
             target,
             fn_name,
             generic_param_list,
             where_clause,
             params,
+            fn_body,
             ret_type,
             should_focus_return_type,
             visibility,
@@ -308,8 +317,6 @@ impl FunctionBuilder {
     }
 
     fn render(self, cap: Option<SnippetCap>, edit: &mut SourceChangeBuilder) -> ast::Fn {
-        let placeholder_expr = make::ext::expr_todo();
-        let fn_body = make::block_expr(vec![], Some(placeholder_expr));
         let visibility = match self.visibility {
             Visibility::None => None,
             Visibility::Crate => Some(make::visibility_pub_crate()),
@@ -321,7 +328,7 @@ impl FunctionBuilder {
             self.generic_param_list,
             self.where_clause,
             self.params,
-            fn_body,
+            self.fn_body,
             self.ret_type,
             self.is_async,
             false, // FIXME : const and unsafe are not handled yet.
