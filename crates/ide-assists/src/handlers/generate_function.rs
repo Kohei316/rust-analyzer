@@ -451,6 +451,7 @@ fn assoc_fn_target_info(
     let (impl_, file) = get_adt_source(ctx, &adt, fn_name)?;
     let target = get_method_target(ctx, &impl_, &adt)?;
     let adt_name = if impl_.is_none() { Some(adt.name(ctx.sema.db)) } else { None };
+    eprintln!("{:?}", adt_name);
     Some(TargetInfo::new(target_module, adt_name, target, file))
 }
 
@@ -2855,5 +2856,74 @@ fn main() {
 }
 ",
         );
+    }
+
+    //     #[test]
+    //     fn new_function_assume_self_type() {
+    //         check_assist(
+    //             generate_function,
+    //             r"
+    // pub struct Foo {
+    //     field_1: usize,
+    //     field_2: String,
+    // }
+
+    // fn main() {
+    //     let foo = Foo::new$0();
+    // }
+    //         ",
+    //             r"
+    // pub struct Foo {
+    //     field_1: usize,
+    //     field_2: String,
+    // }
+
+    // impl Foo {
+    //     fn new() -> Self {
+    //         Self {
+    //             field_1: ${0:todo!()},
+    //             field_2: todo!(),
+    //         }
+    //     }
+    // }
+
+    // fn main() {
+    //     let foo = Foo::new$0();
+    // }
+    //         ",
+    //         )
+    //     }
+
+    #[test]
+    fn new_function_assume_self_type() {
+        check_assist(
+            generate_function,
+            r"
+pub struct Foo {
+    field_1: usize,
+    field_2: String,
+}
+
+fn main() {
+    let foo = Foo::new$0();
+}
+        ",
+            r"
+pub struct Foo {
+    field_1: usize,
+    field_2: String,
+}
+
+impl Foo {
+    fn new() -> ${0:-> Self} {
+        todo!()
+    }
+}
+
+fn main() {
+    let foo = Foo::new$0();
+}
+        ",
+        )
     }
 }
