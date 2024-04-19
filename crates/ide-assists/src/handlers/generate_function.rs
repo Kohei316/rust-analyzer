@@ -75,13 +75,8 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
         }
     }
 
-    let is_struct_asscoc_fn = adt_info
-        .as_ref()
-        .map(|adt_info| match adt_info.adt {
-            Adt::Struct(_) => true,
-            _ => false,
-        })
-        .unwrap_or(false);
+    let is_struct_asscoc_fn =
+        adt_info.as_ref().map(|adt_info| adt_info.adt.as_struct().is_some()).unwrap_or(false);
 
     let function_builder = FunctionBuilder::from_call(
         ctx,
@@ -172,7 +167,6 @@ fn gen_method(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
         target,
     )?;
     let text_range = call.syntax().text_range();
-    let adt_name = if impl_.is_none() { Some(adt.name(ctx.sema.db)) } else { None };
     let adt_info = AdtInfo::new(adt, impl_.is_some());
     let label = format!("Generate {} method", function_builder.fn_name);
     add_func_to_accumulator(acc, ctx, text_range, function_builder, file, Some(adt_info), label)
@@ -484,14 +478,7 @@ fn assoc_fn_target_info(
         return None;
     }
     let (impl_, file) = get_adt_source(ctx, &adt, fn_name)?;
-    eprintln!("{:?}", impl_.as_ref().map(|impl_| impl_.syntax().text()));
     let target = get_method_target(ctx, &impl_, &adt)?;
-    let adt_name = if impl_.is_none() { Some(adt.name(ctx.sema.db)) } else { None };
-    eprintln!("{:?}", adt_name);
-    let is_struct_asscoc_fn = match adt {
-        Adt::Struct(_) => true,
-        _ => false,
-    };
     let adt_info = AdtInfo::new(adt, impl_.is_some());
     Some(TargetInfo::new(target_module, Some(adt_info), target, file))
 }
