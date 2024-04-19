@@ -66,15 +66,22 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
     }
 
     let fn_name = &*name_ref.text();
-    let TargetInfo { target_module, adt_name, adt, is_struct_asscoc_fn, adt_info, target, file } =
+    let TargetInfo { target_module, adt_info, target, file } =
         fn_target_info(ctx, path, &call, fn_name)?;
-    println!("{:?}", adt_name);
 
     if let Some(m) = target_module {
         if !is_editable_crate(m.krate(), ctx.db()) {
             return None;
         }
     }
+
+    let is_struct_asscoc_fn = adt_info
+        .as_ref()
+        .map(|adt_info| match adt_info.adt {
+            Adt::Struct(_) => true,
+            _ => false,
+        })
+        .unwrap_or(false);
 
     let function_builder = FunctionBuilder::from_call(
         ctx,
@@ -91,9 +98,6 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
 
 struct TargetInfo {
     target_module: Option<Module>,
-    adt_name: Option<hir::Name>,
-    adt: Option<Adt>,
-    is_struct_asscoc_fn: bool,
     adt_info: Option<AdtInfo>,
     target: GeneratedFunctionTarget,
     file: FileId,
@@ -102,14 +106,11 @@ struct TargetInfo {
 impl TargetInfo {
     fn new(
         target_module: Option<Module>,
-        adt_name: Option<hir::Name>,
-        adt: Option<Adt>,
-        is_struct_asscoc_fn: bool,
         adt_info: Option<AdtInfo>,
         target: GeneratedFunctionTarget,
         file: FileId,
     ) -> Self {
-        Self { target_module, adt_name, adt, is_struct_asscoc_fn, adt_info, target, file }
+        Self { target_module, adt_info, target, file }
     }
 }
 
@@ -438,7 +439,7 @@ fn get_fn_target_info(
     call: CallExpr,
 ) -> Option<TargetInfo> {
     let (target, file) = get_fn_target(ctx, target_module, call)?;
-    Some(TargetInfo::new(target_module, None, None, false, None, target, file))
+    Some(TargetInfo::new(target_module, None, target, file))
 }
 
 fn get_fn_target(
@@ -492,15 +493,7 @@ fn assoc_fn_target_info(
         _ => false,
     };
     let adt_info = AdtInfo::new(adt, impl_.is_some());
-    Some(TargetInfo::new(
-        target_module,
-        adt_name,
-        Some(adt),
-        is_struct_asscoc_fn,
-        Some(adt_info),
-        target,
-        file,
-    ))
+    Some(TargetInfo::new(target_module, Some(adt_info), target, file))
 }
 
 #[derive(Clone)]
