@@ -86,17 +86,7 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
     )?;
     let text_range = call.syntax().text_range();
     let label = format!("Generate {} function", function_builder.fn_name);
-    add_func_to_accumulator(
-        acc,
-        ctx,
-        text_range,
-        function_builder,
-        file,
-        adt_name,
-        adt_info,
-        adt,
-        label,
-    )
+    add_func_to_accumulator(acc, ctx, text_range, function_builder, file, adt_info, label)
 }
 
 struct TargetInfo {
@@ -184,17 +174,7 @@ fn gen_method(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
     let adt_name = if impl_.is_none() { Some(adt.name(ctx.sema.db)) } else { None };
     let adt_info = AdtInfo::new(adt, impl_.is_some());
     let label = format!("Generate {} method", function_builder.fn_name);
-    add_func_to_accumulator(
-        acc,
-        ctx,
-        text_range,
-        function_builder,
-        file,
-        adt_name,
-        Some(adt_info),
-        Some(adt),
-        label,
-    )
+    add_func_to_accumulator(acc, ctx, text_range, function_builder, file, Some(adt_info), label)
 }
 
 fn add_func_to_accumulator(
@@ -203,57 +183,23 @@ fn add_func_to_accumulator(
     text_range: TextRange,
     function_builder: FunctionBuilder,
     file: FileId,
-    adt_name: Option<hir::Name>,
     adt_info: Option<AdtInfo>,
-    adt: Option<Adt>,
     label: String,
 ) -> Option<()> {
     acc.add(AssistId("generate_function", AssistKind::Generate), label, text_range, |edit| {
         edit.edit_file(file);
 
-        let fn_name = function_builder.fn_name.clone();
         let target = function_builder.target.clone();
         let func = function_builder.render(ctx.config.snippet_cap, edit);
-
-        // if let Some(name) = adt_name {
-        //     let name = make::ty_path(make::ext::ident_path(&format!("{}", name.display(ctx.db()))));
-
-        //     // FIXME: adt may have generic params.
-        //     let impl_ = make::impl_(None, None, name, None, None).clone_for_update();
-
-        //     func.indent(IndentLevel(1));
-        //     impl_.get_or_create_assoc_item_list().add_item(func.into());
-        //     target.insert_impl_at(edit, impl_);
-        // } else {
-        //     target.insert_fn_at(edit, func);
-        // }
-
-        // if let Some(adt) = adt {
-        //     let (impl_, file) = get_adt_source(ctx, &adt, &fn_name.text()).unwrap();
-        //     if impl_.is_none() {
-        //         let name = adt.name(ctx.db());
-        //         let name =
-        //             make::ty_path(make::ext::ident_path(&format!("{}", name.display(ctx.db()))));
-
-        //         // FIXME: adt may have generic params.
-        //         let impl_ = make::impl_(None, None, name, None, None).clone_for_update();
-
-        //         func.indent(IndentLevel(1));
-        //         impl_.get_or_create_assoc_item_list().add_item(func.into());
-        //         target.insert_impl_at(edit, impl_);
-        //     } else {
-        //         target.insert_fn_at(edit, func);
-        //     }
-        // } else {
-        //     target.insert_fn_at(edit, func);
-        // }
 
         if let Some(adt) = adt_info
             .map(|adt_info| if adt_info.impl_exists { None } else { Some(adt_info.adt) })
             .flatten()
         {
-            let name = adt.name(ctx.db());
-            let name = make::ty_path(make::ext::ident_path(&format!("{}", name.display(ctx.db()))));
+            let name = make::ty_path(make::ext::ident_path(&format!(
+                "{}",
+                adt.name(ctx.db()).display(ctx.db())
+            )));
 
             // FIXME: adt may have generic params.
             let impl_ = make::impl_(None, None, name, None, None).clone_for_update();
