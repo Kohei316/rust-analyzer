@@ -66,8 +66,9 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
     }
 
     let fn_name = &*name_ref.text();
-    let TargetInfo { target_module, adt_name, target, file } =
+    let TargetInfo { target_module, adt_name, adt, is_struct_asscoc_fn, target, file } =
         fn_target_info(ctx, path, &call, fn_name)?;
+    println!("{:?}", adt_name);
 
     if let Some(m) = target_module {
         if !is_editable_crate(m.krate(), ctx.db()) {
@@ -75,16 +76,24 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
         }
     }
 
-    let function_builder =
-        FunctionBuilder::from_call(ctx, &call, fn_name, target_module, target, adt_name.is_some())?;
+    let function_builder = FunctionBuilder::from_call(
+        ctx,
+        &call,
+        fn_name,
+        target_module,
+        target,
+        is_struct_asscoc_fn,
+    )?;
     let text_range = call.syntax().text_range();
     let label = format!("Generate {} function", function_builder.fn_name);
-    add_func_to_accumulator(acc, ctx, text_range, function_builder, file, adt_name, label)
+    add_func_to_accumulator(acc, ctx, text_range, function_builder, file, adt_name, adt, label)
 }
 
 struct TargetInfo {
     target_module: Option<Module>,
     adt_name: Option<hir::Name>,
+    adt: Option<Adt>,
+    is_struct_asscoc_fn: bool,
     target: GeneratedFunctionTarget,
     file: FileId,
 }
@@ -93,10 +102,12 @@ impl TargetInfo {
     fn new(
         target_module: Option<Module>,
         adt_name: Option<hir::Name>,
+        adt: Option<Adt>,
+        is_struct_asscoc_fn: bool,
         target: GeneratedFunctionTarget,
         file: FileId,
     ) -> Self {
-        Self { target_module, adt_name, target, file }
+        Self { target_module, adt_name, adt, is_struct_asscoc_fn, target, file }
     }
 }
 
@@ -160,7 +171,16 @@ fn gen_method(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
     let text_range = call.syntax().text_range();
     let adt_name = if impl_.is_none() { Some(adt.name(ctx.sema.db)) } else { None };
     let label = format!("Generate {} method", function_builder.fn_name);
-    add_func_to_accumulator(acc, ctx, text_range, function_builder, file, adt_name, label)
+    add_func_to_accumulator(
+        acc,
+        ctx,
+        text_range,
+        function_builder,
+        file,
+        adt_name,
+        Some(adt),
+        label,
+    )
 }
 
 fn add_func_to_accumulator(
@@ -170,23 +190,45 @@ fn add_func_to_accumulator(
     function_builder: FunctionBuilder,
     file: FileId,
     adt_name: Option<hir::Name>,
+    adt: Option<Adt>,
     label: String,
 ) -> Option<()> {
     acc.add(AssistId("generate_function", AssistKind::Generate), label, text_range, |edit| {
         edit.edit_file(file);
 
+        let fn_name = function_builder.fn_name.clone();
         let target = function_builder.target.clone();
         let func = function_builder.render(ctx.config.snippet_cap, edit);
 
-        if let Some(name) = adt_name {
-            let name = make::ty_path(make::ext::ident_path(&format!("{}", name.display(ctx.db()))));
+        // if let Some(name) = adt_name {
+        //     let name = make::ty_path(make::ext::ident_path(&format!("{}", name.display(ctx.db()))));
 
-            // FIXME: adt may have generic params.
-            let impl_ = make::impl_(None, None, name, None, None).clone_for_update();
+        //     // FIXME: adt may have generic params.
+        //     let impl_ = make::impl_(None, None, name, None, None).clone_for_update();
 
-            func.indent(IndentLevel(1));
-            impl_.get_or_create_assoc_item_list().add_item(func.into());
-            target.insert_impl_at(edit, impl_);
+        //     func.indent(IndentLevel(1));
+        //     impl_.get_or_create_assoc_item_list().add_item(func.into());
+        //     target.insert_impl_at(edit, impl_);
+        // } else {
+        //     target.insert_fn_at(edit, func);
+        // }
+
+        if let Some(adt) = adt {
+            let (impl_, file) = get_adt_source(ctx, &adt, &fn_name.text()).unwrap();
+            if impl_.is_none() {
+                let name = adt.name(ctx.db());
+                let name =
+                    make::ty_path(make::ext::ident_path(&format!("{}", name.display(ctx.db()))));
+
+                // FIXME: adt may have generic params.
+                let impl_ = make::impl_(None, None, name, None, None).clone_for_update();
+
+                func.indent(IndentLevel(1));
+                impl_.get_or_create_assoc_item_list().add_item(func.into());
+                target.insert_impl_at(edit, impl_);
+            } else {
+                target.insert_fn_at(edit, func);
+            }
         } else {
             target.insert_fn_at(edit, func);
         }
@@ -230,6 +272,7 @@ impl FunctionBuilder {
         adt_function: bool,
     ) -> Option<Self> {
         let build_as_new_function = adt_function && fn_name == "new";
+        println!("{}", build_as_new_function);
 
         let target_module =
             target_module.or_else(|| ctx.sema.scope(target.syntax()).map(|it| it.module()))?;
@@ -250,7 +293,8 @@ impl FunctionBuilder {
 
         let expr_for_ret_ty = await_expr.map_or_else(|| call.clone().into(), |it| it.into());
         let (ret_type, should_focus_return_type) = if build_as_new_function {
-            (Some(make::ret_type(make::ty_path(make::ext::ident_path("Self")))), false)
+            let self_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
+            (self_type, false)
         } else {
             make_return_type(ctx, &expr_for_ret_ty, target_module, &mut necessary_generic_params)
         };
@@ -259,7 +303,12 @@ impl FunctionBuilder {
             fn_generic_params(ctx, necessary_generic_params, &target)?;
 
         let placeholder_expr = make::ext::expr_todo();
-        let fn_body = make::block_expr(vec![], Some(placeholder_expr));
+        let fn_body = if build_as_new_function {
+            // todo!()
+            make::block_expr(vec![], Some(placeholder_expr))
+        } else {
+            make::block_expr(vec![], Some(placeholder_expr))
+        };
 
         Some(Self {
             target,
@@ -411,7 +460,7 @@ fn get_fn_target_info(
     call: CallExpr,
 ) -> Option<TargetInfo> {
     let (target, file) = get_fn_target(ctx, target_module, call)?;
-    Some(TargetInfo::new(target_module, None, target, file))
+    Some(TargetInfo::new(target_module, None, None, false, target, file))
 }
 
 fn get_fn_target(
@@ -456,10 +505,15 @@ fn assoc_fn_target_info(
         return None;
     }
     let (impl_, file) = get_adt_source(ctx, &adt, fn_name)?;
+    eprintln!("{:?}", impl_.as_ref().map(|impl_| impl_.syntax().text()));
     let target = get_method_target(ctx, &impl_, &adt)?;
     let adt_name = if impl_.is_none() { Some(adt.name(ctx.sema.db)) } else { None };
     eprintln!("{:?}", adt_name);
-    Some(TargetInfo::new(target_module, adt_name, target, file))
+    let is_struct_asscoc_fn = match adt {
+        Adt::Struct(_) => true,
+        _ => false,
+    };
+    Some(TargetInfo::new(target_module, adt_name, Some(adt), is_struct_asscoc_fn, target, file))
 }
 
 #[derive(Clone)]
