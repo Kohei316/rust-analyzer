@@ -75,17 +75,8 @@ fn gen_fn(acc: &mut Assists, ctx: &AssistContext<'_>) -> Option<()> {
         }
     }
 
-    let is_struct_asscoc_fn =
-        adt_info.as_ref().map(|adt_info| adt_info.adt.as_struct().is_some()).unwrap_or(false);
-
-    let function_builder = FunctionBuilder::from_call(
-        ctx,
-        &call,
-        fn_name,
-        target_module,
-        target,
-        is_struct_asscoc_fn,
-    )?;
+    let function_builder =
+        FunctionBuilder::from_call(ctx, &call, fn_name, target_module, target, &adt_info)?;
     let text_range = call.syntax().text_range();
     let label = format!("Generate {} function", function_builder.fn_name);
     add_func_to_accumulator(acc, ctx, text_range, function_builder, file, adt_info, label)
@@ -242,9 +233,11 @@ impl FunctionBuilder {
         fn_name: &str,
         target_module: Option<Module>,
         target: GeneratedFunctionTarget,
-        adt_function: bool,
+        adt_info: &Option<AdtInfo>,
     ) -> Option<Self> {
-        let build_as_new_function = adt_function && fn_name == "new";
+        let is_struct_asscoc_fn =
+            adt_info.as_ref().map(|adt_info| adt_info.adt.as_struct().is_some()).unwrap_or(false);
+        let build_as_new_function = is_struct_asscoc_fn && fn_name == "new";
         println!("{}", build_as_new_function);
 
         let target_module =
