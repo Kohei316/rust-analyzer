@@ -258,16 +258,10 @@ impl FunctionBuilder {
 
         let placeholder_expr = make::ext::expr_todo();
 
-        if let Some(_strukt) = adt_info.as_ref().and_then(|adt_info| {
-            if fn_name.text() == "new" {
-                adt_info.adt.as_struct()
-            } else {
-                None
-            }
-        }) {
+        if let Some(tail_expr) = make_fn_body_of_new_function(&fn_name.text(), adt_info) {
             ret_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
             should_focus_return_type = false;
-            fn_body = make::block_expr(vec![], Some(placeholder_expr));
+            fn_body = make::block_expr(vec![], Some(tail_expr));
         } else {
             let expr_for_ret_ty = await_expr.map_or_else(|| call.clone().into(), |it| it.into());
             (ret_type, should_focus_return_type) = make_return_type(
@@ -424,6 +418,18 @@ fn make_return_type(
     };
     let ret_type = ret_ty.map(make::ret_type);
     (ret_type, should_focus_return_type)
+}
+
+fn make_fn_body_of_new_function(fn_name: &str, adt_info: &Option<AdtInfo>) -> Option<ast::Expr> {
+    if fn_name != "new" {
+        return None;
+    };
+    let _strukt = adt_info.as_ref()?.adt.as_struct()?;
+
+    let placeholder_expr = make::ext::expr_todo();
+    // let fn_body = make::block_expr(vec![], Some(placeholder_expr));
+    // Some(fn_body)
+    Some(placeholder_expr)
 }
 
 fn get_fn_target_info(
