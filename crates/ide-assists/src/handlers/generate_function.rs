@@ -271,7 +271,11 @@ impl FunctionBuilder {
 
         let placeholder_expr = make::ext::expr_todo();
 
-        if build_as_new_function {
+        if let Some(strukt) = adt_info
+            .as_ref()
+            .map(|adt_info| if fn_name.text() == "new" { adt_info.adt.as_struct() } else { None })
+            .flatten()
+        {
             ret_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
             should_focus_return_type = false;
             fn_body = make::block_expr(vec![], Some(placeholder_expr));
