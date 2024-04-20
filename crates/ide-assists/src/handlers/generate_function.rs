@@ -235,19 +235,6 @@ impl FunctionBuilder {
         target: GeneratedFunctionTarget,
         adt_info: &Option<AdtInfo>,
     ) -> Option<Self> {
-        let is_struct_asscoc_fn =
-            adt_info.as_ref().map(|adt_info| adt_info.adt.as_struct().is_some()).unwrap_or(false);
-        let build_as_new_function = is_struct_asscoc_fn && fn_name == "new";
-        println!("{}", build_as_new_function);
-
-        if let Some(strukt) = adt_info
-            .as_ref()
-            .map(|adt_info| if fn_name == "new" { adt_info.adt.as_struct() } else { None })
-            .flatten()
-        {
-            println!("{:?}", strukt.fields(ctx.db()));
-        }
-
         let target_module =
             target_module.or_else(|| ctx.sema.scope(target.syntax()).map(|it| it.module()))?;
 
@@ -271,7 +258,7 @@ impl FunctionBuilder {
 
         let placeholder_expr = make::ext::expr_todo();
 
-        if let Some(strukt) = adt_info
+        if let Some(_strukt) = adt_info
             .as_ref()
             .map(|adt_info| if fn_name.text() == "new" { adt_info.adt.as_struct() } else { None })
             .flatten()
