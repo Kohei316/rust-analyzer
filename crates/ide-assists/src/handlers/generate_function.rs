@@ -265,24 +265,29 @@ impl FunctionBuilder {
         let await_expr = call.syntax().parent().and_then(ast::AwaitExpr::cast);
         let is_async = await_expr.is_some();
 
-        let expr_for_ret_ty = await_expr.map_or_else(|| call.clone().into(), |it| it.into());
-        let (ret_type, should_focus_return_type) = if build_as_new_function {
-            let self_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
-            (self_type, false)
+        let ret_type;
+        let should_focus_return_type;
+        let fn_body;
+
+        let placeholder_expr = make::ext::expr_todo();
+
+        if build_as_new_function {
+            ret_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
+            should_focus_return_type = false;
+            fn_body = make::block_expr(vec![], Some(placeholder_expr));
         } else {
-            make_return_type(ctx, &expr_for_ret_ty, target_module, &mut necessary_generic_params)
+            let expr_for_ret_ty = await_expr.map_or_else(|| call.clone().into(), |it| it.into());
+            (ret_type, should_focus_return_type) = make_return_type(
+                ctx,
+                &expr_for_ret_ty,
+                target_module,
+                &mut necessary_generic_params,
+            );
+            fn_body = make::block_expr(vec![], Some(placeholder_expr));
         };
 
         let (generic_param_list, where_clause) =
             fn_generic_params(ctx, necessary_generic_params, &target)?;
-
-        let placeholder_expr = make::ext::expr_todo();
-        let fn_body = if build_as_new_function {
-            // todo!()
-            make::block_expr(vec![], Some(placeholder_expr))
-        } else {
-            make::block_expr(vec![], Some(placeholder_expr))
-        };
 
         Some(Self {
             target,
