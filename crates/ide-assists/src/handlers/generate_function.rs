@@ -178,9 +178,9 @@ fn add_func_to_accumulator(
         let target = function_builder.target.clone();
         let func = function_builder.render(ctx.config.snippet_cap, edit);
 
-        if let Some(adt) = adt_info
-            .map(|adt_info| if adt_info.impl_exists { None } else { Some(adt_info.adt) })
-            .flatten()
+        if let Some(adt) =
+            adt_info
+                .and_then(|adt_info| if adt_info.impl_exists { None } else { Some(adt_info.adt) })
         {
             let name = make::ty_path(make::ext::ident_path(&format!(
                 "{}",
@@ -258,11 +258,13 @@ impl FunctionBuilder {
 
         let placeholder_expr = make::ext::expr_todo();
 
-        if let Some(_strukt) = adt_info
-            .as_ref()
-            .map(|adt_info| if fn_name.text() == "new" { adt_info.adt.as_struct() } else { None })
-            .flatten()
-        {
+        if let Some(_strukt) = adt_info.as_ref().and_then(|adt_info| {
+            if fn_name.text() == "new" {
+                adt_info.adt.as_struct()
+            } else {
+                None
+            }
+        }) {
             ret_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
             should_focus_return_type = false;
             fn_body = make::block_expr(vec![], Some(placeholder_expr));
