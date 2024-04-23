@@ -1,6 +1,6 @@
 use hir::{
-    Adt, AsAssocItem, HasSource, HirDisplay, HirFileIdExt, Module, PathResolution, Semantics, Type,
-    TypeInfo,
+    Adt, AsAssocItem, HasSource, HirDisplay, HirFileIdExt, Module, PathResolution, Semantics,
+    StructKind, Type, TypeInfo,
 };
 use ide_db::{
     base_db::FileId,
@@ -256,10 +256,10 @@ impl FunctionBuilder {
         let should_focus_return_type;
         let fn_body;
 
-        if let Some(fn_body_of_new) = make_fn_body_of_new_function(&fn_name.text(), adt_info) {
+        if let Some(body) = make_fn_body_of_new_function(ctx, &fn_name.text(), adt_info) {
             ret_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
             should_focus_return_type = false;
-            fn_body = fn_body_of_new;
+            fn_body = body;
         } else {
             let expr_for_ret_ty = await_expr.map_or_else(|| call.clone().into(), |it| it.into());
             (ret_type, should_focus_return_type) = make_return_type(
@@ -420,17 +420,39 @@ fn make_return_type(
 }
 
 fn make_fn_body_of_new_function(
+    ctx: &AssistContext<'_>,
     fn_name: &str,
     adt_info: &Option<AdtInfo>,
 ) -> Option<ast::BlockExpr> {
     if fn_name != "new" {
         return None;
     };
-    let _strukt = adt_info.as_ref()?.adt.as_struct()?;
+    let adt_info = adt_info.as_ref()?;
 
-    // let fields = todo!();
-    // let tail_expr = make::record_expr(make::ext::ident_path("Self"), fields).into();
-    let tail_expr = make::ext::expr_todo();
+    let placeholder_expr = make::ext::expr_todo();
+    let tail_expr = if let Some(record_fields) =
+        adt_info.adt.as_struct().and_then(|strukt| match strukt.kind(ctx.db()) {
+            StructKind::Record => Some(strukt.fields(ctx.db())),
+            _ => None,
+        }) {
+        let fields = record_fields
+            .iter()
+            .map(|field| {
+                let record_expr_field = make::record_expr_field(
+                    make::name_ref(&format!("{}", field.name(ctx.db()).display(ctx.db()))),
+                    Some(placeholder_expr.clone()),
+                );
+                record_expr_field
+            })
+            .collect::<Vec<_>>();
+        let record_expr =
+            make::record_expr(make::ext::ident_path("Self"), make::record_expr_field_list(fields));
+
+        record_expr.into()
+    } else {
+        placeholder_expr
+    };
+
     let fn_body = make::block_expr(vec![], Some(tail_expr));
     Some(fn_body)
 }
@@ -971,7 +993,7 @@ fn filter_bounds_in_scope(
 ) -> Option<()> {
     let target_impl = target.parent().ancestors().find_map(ast::Impl::cast)?;
     let target_impl = ctx.sema.to_def(&target_impl)?;
-    // It's sufficient to test only the first element of `generic_params` because of the order of
+    // It's sufficient to test only the first element of `generic_F
     // insertion (see `params_and_where_preds_in_scope()`).
     let def = generic_params.first()?.self_ty_param.parent();
     if def != hir::GenericDef::Impl(target_impl) {
@@ -2905,42 +2927,6 @@ fn main() {
         );
     }
 
-    //     #[test]
-    //     fn new_function_assume_self_type() {
-    //         check_assist(
-    //             generate_function,
-    //             r"
-    // pub struct Foo {
-    //     field_1: usize,
-    //     field_2: String,
-    // }
-
-    // fn main() {
-    //     let foo = Foo::new$0();
-    // }
-    //         ",
-    //             r"
-    // pub struct Foo {
-    //     field_1: usize,
-    //     field_2: String,
-    // }
-
-    // impl Foo {
-    //     fn new() -> Self {
-    //         Self {
-    //             field_1: ${0:todo!()},
-    //             field_2: todo!(),
-    //         }
-    //     }
-    // }
-
-    // fn main() {
-    //     let foo = Foo::new$0();
-    // }
-    //         ",
-    //         )
-    //     }
-
     #[test]
     fn new_function_assume_self_type() {
         check_assist(
@@ -2962,7 +2948,7 @@ pub struct Foo {
 }
 impl Foo {
     fn new() -> Self {
-        ${0:todo!()}
+        ${0:Self { field_1: todo!(), field_2: todo!() }}
     }
 }
 
