@@ -256,7 +256,7 @@ impl FunctionBuilder {
         let should_focus_return_type;
         let fn_body;
 
-        if let Some(body) = make_fn_body_of_new_function(ctx, &fn_name.text(), adt_info) {
+        if let Some(body) = make_fn_body_as_new_function(ctx, &fn_name.text(), adt_info) {
             ret_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
             should_focus_return_type = false;
             fn_body = body;
@@ -419,7 +419,7 @@ fn make_return_type(
     (ret_type, should_focus_return_type)
 }
 
-fn make_fn_body_of_new_function(
+fn make_fn_body_as_new_function(
     ctx: &AssistContext<'_>,
     fn_name: &str,
     adt_info: &Option<AdtInfo>,
@@ -429,6 +429,7 @@ fn make_fn_body_of_new_function(
     };
     let adt_info = adt_info.as_ref()?;
 
+    let path_self = make::ext::ident_path("Self");
     let placeholder_expr = make::ext::expr_todo();
     let tail_expr = if let Some(strukt) = adt_info.adt.as_struct() {
         match strukt.kind(ctx.db()) {
@@ -444,10 +445,8 @@ fn make_fn_body_of_new_function(
                         record_expr_field
                     })
                     .collect::<Vec<_>>();
-                let record_expr = make::record_expr(
-                    make::ext::ident_path("Self"),
-                    make::record_expr_field_list(fields),
-                );
+                let record_expr =
+                    make::record_expr(path_self, make::record_expr_field_list(fields));
 
                 record_expr.into()
             }
@@ -457,14 +456,11 @@ fn make_fn_body_of_new_function(
                     .iter()
                     .map(|_| placeholder_expr.clone())
                     .collect::<Vec<_>>();
-                let call_expr = make::expr_call(
-                    make::expr_path(make::ext::ident_path("Self")),
-                    make::arg_list(args),
-                );
+                let call_expr = make::expr_call(make::expr_path(path_self), make::arg_list(args));
 
                 call_expr.into()
             }
-            StructKind::Unit => make::expr_path(make::ext::ident_path("Self")),
+            StructKind::Unit => make::expr_path(path_self),
         }
     } else {
         placeholder_expr
