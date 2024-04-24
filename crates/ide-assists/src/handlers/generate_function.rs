@@ -642,7 +642,7 @@ impl GeneratedFunctionTarget {
 }
 
 struct AdtInfo {
-    adt: Adt,
+    adt: hir::Adt,
     impl_exists: bool,
 }
 
