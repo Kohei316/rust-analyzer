@@ -430,25 +430,42 @@ fn make_fn_body_of_new_function(
     let adt_info = adt_info.as_ref()?;
 
     let placeholder_expr = make::ext::expr_todo();
-    let tail_expr = if let Some(record_fields) =
-        adt_info.adt.as_struct().and_then(|strukt| match strukt.kind(ctx.db()) {
-            StructKind::Record => Some(strukt.fields(ctx.db())),
-            _ => None,
-        }) {
-        let fields = record_fields
-            .iter()
-            .map(|field| {
-                let record_expr_field = make::record_expr_field(
-                    make::name_ref(&format!("{}", field.name(ctx.db()).display(ctx.db()))),
-                    Some(placeholder_expr.clone()),
+    let tail_expr = if let Some(strukt) = adt_info.adt.as_struct() {
+        match strukt.kind(ctx.db()) {
+            StructKind::Record => {
+                let fields = strukt
+                    .fields(ctx.db())
+                    .iter()
+                    .map(|field| {
+                        let record_expr_field = make::record_expr_field(
+                            make::name_ref(&format!("{}", field.name(ctx.db()).display(ctx.db()))),
+                            Some(placeholder_expr.clone()),
+                        );
+                        record_expr_field
+                    })
+                    .collect::<Vec<_>>();
+                let record_expr = make::record_expr(
+                    make::ext::ident_path("Self"),
+                    make::record_expr_field_list(fields),
                 );
-                record_expr_field
-            })
-            .collect::<Vec<_>>();
-        let record_expr =
-            make::record_expr(make::ext::ident_path("Self"), make::record_expr_field_list(fields));
 
-        record_expr.into()
+                record_expr.into()
+            }
+            StructKind::Tuple => {
+                let args = strukt
+                    .fields(ctx.db())
+                    .iter()
+                    .map(|_| placeholder_expr.clone())
+                    .collect::<Vec<_>>();
+                let call_expr = make::expr_call(
+                    make::expr_path(make::ext::ident_path("Self")),
+                    make::arg_list(args),
+                );
+
+                call_expr.into()
+            }
+            StructKind::Unit => make::expr_path(make::ext::ident_path("Self")),
+        }
     } else {
         placeholder_expr
     };
@@ -2949,6 +2966,84 @@ pub struct Foo {
 impl Foo {
     fn new() -> Self {
         ${0:Self { field_1: todo!(), field_2: todo!() }}
+    }
+}
+
+fn main() {
+    let foo = Foo::new();
+}
+        ",
+        )
+    }
+
+    #[test]
+    fn new_function_assume_self_type_for_tuple_struct() {
+        check_assist(
+            generate_function,
+            r"
+pub struct Foo (usize, String);
+
+fn main() {
+    let foo = Foo::new$0();
+}
+        ",
+            r"
+pub struct Foo (usize, String);
+impl Foo {
+    fn new() -> Self {
+        ${0:Self(todo!(), todo!())}
+    }
+}
+
+fn main() {
+    let foo = Foo::new();
+}
+        ",
+        )
+    }
+
+    #[test]
+    fn new_function_assume_self_type_for_unit_struct() {
+        check_assist(
+            generate_function,
+            r"
+pub struct Foo;
+
+fn main() {
+    let foo = Foo::new$0();
+}
+        ",
+            r"
+pub struct Foo;
+impl Foo {
+    fn new() -> Self {
+        ${0:Self}
+    }
+}
+
+fn main() {
+    let foo = Foo::new();
+}
+        ",
+        )
+    }
+
+    #[test]
+    fn new_function_for_enum_assume_self_type() {
+        check_assist(
+            generate_function,
+            r"
+pub enum Foo {}
+
+fn main() {
+    let foo = Foo::new$0();
+}
+        ",
+            r"
+pub enum Foo {}
+impl Foo {
+    fn new() -> Self {
+        ${0:todo!()}
     }
 }
 
