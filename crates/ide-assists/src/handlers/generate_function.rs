@@ -256,8 +256,8 @@ impl FunctionBuilder {
         let should_focus_return_type;
         let fn_body;
 
-        // If the function name has name "new" and is the associated function, we generate fn body as constuctor and
-        // assume self return type.
+        // If the function the name has name "new" and is the associated function,we generate fn body
+        // as a constuctor and assume a self return type.
         if let Some(body) = make_fn_body_as_new_function(ctx, &fn_name.text(), adt_info) {
             ret_type = Some(make::ret_type(make::ty_path(make::ext::ident_path("Self"))));
             should_focus_return_type = false;
@@ -3027,7 +3027,7 @@ fn main() {
     }
 
     #[test]
-    fn new_function_for_enum_assume_self_type() {
+    fn new_function_assume_self_type_for_enum() {
         check_assist(
             generate_function,
             r"
