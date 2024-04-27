@@ -129,6 +129,8 @@ pub(crate) fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<Infer
     }
 
     ctx.infer_body();
+    // println!("{:?}", ctx);
+    // println!("{:?}", ctx.clone().resolve_all());
 
     ctx.infer_mut_body();
 

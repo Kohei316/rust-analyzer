@@ -1140,9 +1140,22 @@ async fn main() {
 //- minicore: future
 async fn main() {
     let _x = async {
-      //^^ impl Future<Output = i32>
-        return 8;
+      //^^ impl Future<Output = !>
+        return 8_i32;
     };
+}"#,
+        );
+    }
+
+    #[test]
+    fn type_hints_immediately_invoked_function() {
+        check_types(
+            r#"
+fn main() {
+    let _x = (|| {
+      //^^ i32
+        return 2_i32;
+    })();
 }"#,
         );
     }

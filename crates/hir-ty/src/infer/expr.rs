@@ -23,6 +23,7 @@ use crate::{
     autoderef::{builtin_deref, deref_by_trait, Autoderef},
     consteval,
     db::{InternedClosure, InternedCoroutine},
+    display::HirDisplay,
     error_lifetime,
     infer::{
         coerce::{CoerceMany, CoercionCause},
@@ -123,6 +124,8 @@ impl InferenceContext<'_> {
     }
 
     fn infer_expr_inner(&mut self, tgt_expr: ExprId, expected: &Expectation) -> Ty {
+        // println!("infer expr inner");
+        // println!("expr: {:?}", self.body[tgt_expr]);
         self.db.unwind_if_cancelled();
 
         let ty = match &self.body[tgt_expr] {
@@ -910,13 +913,16 @@ impl InferenceContext<'_> {
                 self.result.standard_types.unit.clone()
             }
         };
+        // println!("ty 1: {}", ty.display(self.db));
         // use a new type variable if we got unknown here
         let ty = self.insert_type_vars_shallow(ty);
+        // println!("ty 2: {}", ty.display(self.db));
         self.write_expr_ty(tgt_expr, ty.clone());
         if self.resolve_ty_shallow(&ty).is_never() {
             // Any expression that produces a value of type `!` must have diverged
             self.diverges = Diverges::Always;
         }
+        // println!("ty 3: {}", ty.display(self.db));
         ty
     }
 
@@ -927,6 +933,7 @@ impl InferenceContext<'_> {
         statements: &[Statement],
         tail: &Option<ExprId>,
     ) -> Ty {
+        // println!("infer async block");
         let ret_ty = self.table.new_type_var();
         let prev_diverges = mem::replace(&mut self.diverges, Diverges::Maybe);
         let prev_ret_ty = mem::replace(&mut self.return_ty, ret_ty.clone());
@@ -941,7 +948,9 @@ impl InferenceContext<'_> {
         self.return_ty = prev_ret_ty;
         self.return_coercion = prev_ret_coercion;
 
-        self.lower_async_block_type_impl_trait(inner_ty, tgt_expr)
+        let ty = self.lower_async_block_type_impl_trait(inner_ty, tgt_expr);
+        // println!("infer async block result ty: {}", ty.display(self.db));
+        ty
     }
 
     pub(crate) fn lower_async_block_type_impl_trait(
