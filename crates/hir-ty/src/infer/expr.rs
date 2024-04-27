@@ -124,8 +124,6 @@ impl InferenceContext<'_> {
     }
 
     fn infer_expr_inner(&mut self, tgt_expr: ExprId, expected: &Expectation) -> Ty {
-        // println!("infer expr inner");
-        // println!("expr: {:?}", self.body[tgt_expr]);
         self.db.unwind_if_cancelled();
 
         let ty = match &self.body[tgt_expr] {
@@ -215,11 +213,14 @@ impl InferenceContext<'_> {
                     sig_tys.push(arg_ty);
                 }
 
-                // add return type
                 let ret_ty = match ret_type {
                     Some(type_ref) => self.make_ty(type_ref),
                     None => self.table.new_type_var(),
                 };
+                println!(
+                    "closure ret ty: {:?}",
+                    ret_type.as_ref().map(|t| format!("{}", t.display(self.db)))
+                );
                 if let ClosureKind::Async = closure_kind {
                     sig_tys.push(self.lower_async_block_type_impl_trait(ret_ty.clone(), *body));
                 } else {
@@ -239,6 +240,7 @@ impl InferenceContext<'_> {
                     ),
                 })
                 .intern(Interner);
+                println!("sig ty: {}", sig_ty.display(self.db));
 
                 let (id, ty, resume_yield_tys) = match closure_kind {
                     ClosureKind::Coroutine(_) => {
@@ -913,16 +915,13 @@ impl InferenceContext<'_> {
                 self.result.standard_types.unit.clone()
             }
         };
-        // println!("ty 1: {}", ty.display(self.db));
         // use a new type variable if we got unknown here
         let ty = self.insert_type_vars_shallow(ty);
-        // println!("ty 2: {}", ty.display(self.db));
         self.write_expr_ty(tgt_expr, ty.clone());
         if self.resolve_ty_shallow(&ty).is_never() {
             // Any expression that produces a value of type `!` must have diverged
             self.diverges = Diverges::Always;
         }
-        // println!("ty 3: {}", ty.display(self.db));
         ty
     }
 
@@ -933,7 +932,6 @@ impl InferenceContext<'_> {
         statements: &[Statement],
         tail: &Option<ExprId>,
     ) -> Ty {
-        // println!("infer async block");
         let ret_ty = self.table.new_type_var();
         let prev_diverges = mem::replace(&mut self.diverges, Diverges::Maybe);
         let prev_ret_ty = mem::replace(&mut self.return_ty, ret_ty.clone());
@@ -949,7 +947,6 @@ impl InferenceContext<'_> {
         self.return_coercion = prev_ret_coercion;
 
         let ty = self.lower_async_block_type_impl_trait(inner_ty, tgt_expr);
-        // println!("infer async block result ty: {}", ty.display(self.db));
         ty
     }
 
@@ -1066,18 +1063,32 @@ impl InferenceContext<'_> {
     }
 
     pub(super) fn infer_return(&mut self, expr: ExprId) {
+        // println!("infer return {:?}", self.body[expr]);
+        // if let Expr::Async { tail, .. } = self.body[expr] {
+        //     println!("tail: {:?}", tail.map(|tail| &self.body[tail]))
+        // }
         let ret_ty = self
             .return_coercion
             .as_mut()
             .expect("infer_return called outside function body")
             .expected_ty();
         let return_expr_ty = self.infer_expr_inner(expr, &Expectation::HasType(ret_ty));
+        // println!("{:?}", self.body[expr]);
+        // println!("return expr ty: {}", return_expr_ty.display(self.db));
         let mut coerce_many = self.return_coercion.take().unwrap();
         coerce_many.coerce(self, Some(expr), &return_expr_ty, CoercionCause::Expr(expr));
+        // println!("coerce many: {:?}", coerce_many);
         self.return_coercion = Some(coerce_many);
     }
 
     fn infer_expr_return(&mut self, ret: ExprId, expr: Option<ExprId>) -> Ty {
+        println!("infer expr return");
+        println!("ret: {:?}", self.body[ret]);
+        println!("expr: {:?}", expr.map(|expr| &self.body[expr]));
+        println!(
+            "return coercion: {}",
+            self.return_coercion.as_ref().unwrap().expected_ty().display(self.db)
+        );
         match self.return_coercion {
             Some(_) => {
                 if let Some(expr) = expr {
@@ -1095,6 +1106,10 @@ impl InferenceContext<'_> {
                 }
             }
         }
+        println!(
+            "return coercion: {}",
+            self.return_coercion.as_ref().unwrap().expected_ty().display(self.db)
+        );
         self.result.standard_types.never.clone()
     }
 

@@ -1152,10 +1152,10 @@ async fn main() {
         check_types(
             r#"
 fn main() {
-    let _x = (|| {
-      //^^ i32
+    let _x = || {
+      //^^ impl Fn() -> i32
         return 2_i32;
-    })();
+    };
 }"#,
         );
     }

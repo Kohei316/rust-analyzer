@@ -129,7 +129,7 @@ pub(crate) fn infer_query(db: &dyn HirDatabase, def: DefWithBodyId) -> Arc<Infer
     }
 
     ctx.infer_body();
-    // println!("{:?}", ctx);
+    // println!("{:?}", ctx.result);
     // println!("{:?}", ctx.clone().resolve_all());
 
     ctx.infer_mut_body();
@@ -997,6 +997,7 @@ impl<'a> InferenceContext<'a> {
     }
 
     fn infer_body(&mut self) {
+        // println!("return coercion: {:?}", self.return_coercion);
         match self.return_coercion {
             Some(_) => self.infer_return(self.body.body_expr),
             None => {
