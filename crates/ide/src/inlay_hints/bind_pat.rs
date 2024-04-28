@@ -1127,7 +1127,7 @@ fn test() {
             r#"
 //- minicore: future
 async fn main() {
-    let _x = async { 8 };
+    let _x = async { 8_i32 };
       //^^ impl Future<Output = i32>
 }"#,
         );
