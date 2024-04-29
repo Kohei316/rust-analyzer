@@ -23,7 +23,6 @@ use crate::{
     autoderef::{builtin_deref, deref_by_trait, Autoderef},
     consteval,
     db::{InternedClosure, InternedCoroutine},
-    display::HirDisplay,
     error_lifetime,
     infer::{
         coerce::{CoerceMany, CoercionCause},
