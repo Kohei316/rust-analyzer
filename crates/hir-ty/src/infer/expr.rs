@@ -23,7 +23,6 @@ use crate::{
     autoderef::{builtin_deref, deref_by_trait, Autoderef},
     consteval,
     db::{InternedClosure, InternedCoroutine},
-    display::HirDisplay,
     error_lifetime,
     infer::{
         coerce::{CoerceMany, CoercionCause},
@@ -213,6 +212,7 @@ impl InferenceContext<'_> {
                     sig_tys.push(arg_ty);
                 }
 
+                // add return type
                 let ret_ty = match ret_type {
                     Some(type_ref) => self.make_ty(type_ref),
                     None => self.table.new_type_var(),
