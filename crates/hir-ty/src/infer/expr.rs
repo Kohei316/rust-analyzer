@@ -23,6 +23,7 @@ use crate::{
     autoderef::{builtin_deref, deref_by_trait, Autoderef},
     consteval,
     db::{InternedClosure, InternedCoroutine},
+    display::HirDisplay,
     error_lifetime,
     infer::{
         coerce::{CoerceMany, CoercionCause},
@@ -73,9 +74,14 @@ impl InferenceContext<'_> {
     /// Return the type after possible coercion.
     pub(super) fn infer_expr_coerce(&mut self, expr: ExprId, expected: &Expectation) -> Ty {
         let ty = self.infer_expr_inner(expr, expected);
+        // println!("ty {}", ty.display(self.db));
         if let Some(target) = expected.only_has_type(&mut self.table) {
+            // println!("target {}", target.display(self.db));
             match self.coerce(Some(expr), &ty, &target) {
-                Ok(res) => res,
+                Ok(res) => {
+                    // println!("res: {}", res.display(self.db));
+                    res
+                }
                 Err(_) => {
                     self.result.type_mismatches.insert(
                         expr.into(),
@@ -166,10 +172,10 @@ impl InferenceContext<'_> {
                 self.result.standard_types.bool_.clone()
             }
             Expr::Block { statements, tail, label, id } => {
-                self.infer_block(tgt_expr, *id, statements, *tail, *label, expected)
+                self.infer_block(tgt_expr, *id, statements, *tail, *label, expected, false)
             }
             Expr::Unsafe { id, statements, tail } => {
-                self.infer_block(tgt_expr, *id, statements, *tail, None, expected)
+                self.infer_block(tgt_expr, *id, statements, *tail, None, expected, false)
             }
             Expr::Const(id) => {
                 self.with_breakable_ctx(BreakableKind::Border, None, None, |this| {
@@ -932,8 +938,23 @@ impl InferenceContext<'_> {
         let prev_ret_coercion =
             mem::replace(&mut self.return_coercion, Some(CoerceMany::new(ret_ty.clone())));
 
+        let expected = &Expectation::has_type(ret_ty);
         let (_, inner_ty) = self.with_breakable_ctx(BreakableKind::Border, None, None, |this| {
-            this.infer_block(tgt_expr, *id, statements, *tail, None, &Expectation::has_type(ret_ty))
+            let ty = this.infer_block(tgt_expr, *id, statements, *tail, None, expected, true);
+            if let Some(target) = expected.only_has_type(&mut this.table) {
+                match this.coerce(Some(tgt_expr), &ty, &target) {
+                    Ok(res) => res,
+                    Err(_) => {
+                        this.result.type_mismatches.insert(
+                            tgt_expr.into(),
+                            TypeMismatch { expected: target.clone(), actual: ty.clone() },
+                        );
+                        target
+                    }
+                }
+            } else {
+                ty
+            }
         });
 
         self.diverges = prev_diverges;
@@ -1334,6 +1355,7 @@ impl InferenceContext<'_> {
         tail: Option<ExprId>,
         label: Option<LabelId>,
         expected: &Expectation,
+        is_async: bool,
     ) -> Ty {
         let coerce_ty = expected.coercion_target_type(&mut self.table);
         let g = self.resolver.update_to_inner_scope(self.db.upcast(), self.owner, expr);

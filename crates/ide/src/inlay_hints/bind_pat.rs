@@ -1140,7 +1140,7 @@ async fn main() {
 //- minicore: future
 async fn main() {
     let _x = async {
-      //^^ impl Future<Output = !>
+      //^^ impl Future<Output = i32>
         return 8_i32;
     };
 }"#,
@@ -1181,7 +1181,7 @@ async fn main() {
 //- minicore: future
 async fn main() {
     let _x = async {
-      //^^ impl Future<Output = !>
+      //^^ impl Future<Output = i32>
        { return 8_i32; };
     };
 }"#,
