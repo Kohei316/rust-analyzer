@@ -956,8 +956,7 @@ impl InferenceContext<'_> {
         self.return_ty = prev_ret_ty;
         self.return_coercion = prev_ret_coercion;
 
-        let ty = self.lower_async_block_type_impl_trait(inner_ty, tgt_expr);
-        ty
+        self.lower_async_block_type_impl_trait(inner_ty, tgt_expr)
     }
 
     pub(crate) fn lower_async_block_type_impl_trait(
