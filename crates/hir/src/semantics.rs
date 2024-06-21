@@ -1421,7 +1421,10 @@ impl<'db> SemanticsImpl<'db> {
     }
 
     /// Search for a definition's source and cache its syntax tree
-    pub fn source<Def: HasSource>(&self, def: Def) -> Option<InFile<Def::Ast>>
+    pub fn source<DB: HirDatabase, Def: HasSource<'db, DB>>(
+        &self,
+        def: Def,
+    ) -> Option<InFile<Def::Ast>>
     where
         Def::Ast: AstNode,
     {
