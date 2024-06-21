@@ -244,8 +244,7 @@ impl<'a, DB: HirDatabase> HasSource<'a, DB> for Param {
                 .map(|value| InFile { file_id, value })
             }
             Callee::Closure(closure, _) => {
-                let InternedClosure(owner, expr_id) =
-                    sema.imp.lookup_intern_closure(closure.into());
+                let InternedClosure(owner, expr_id) = sema.lookup_intern_closure(closure.into());
                 let (_, source_map) = sema.db.body_with_source_map(owner);
                 let ast @ InFile { file_id, value } = source_map.expr_syntax(expr_id).ok()?;
                 let root = sema.db.parse_or_expand(file_id);

@@ -284,6 +284,17 @@ impl<'db, DB: HirDatabase> Semantics<'db, DB> {
     pub fn to_union_def(&self, u: &ast::Union) -> Option<Union> {
         self.imp.to_def(u).map(Union::from)
     }
+
+    /// Search for a definition's source and cache its syntax tree
+    pub fn source<Def: HasSource<'db, DB>>(&'db self, def: Def) -> Option<InFile<Def::Ast>>
+    where
+        Def::Ast: AstNode,
+    {
+        // FIXME: source call should go through the parse cache
+        let res = def.source(self)?;
+        self.cache(find_root(res.value.syntax()), res.file_id);
+        Some(res)
+    }
 }
 
 impl<'db> SemanticsImpl<'db> {
@@ -1418,20 +1429,6 @@ impl<'db> SemanticsImpl<'db> {
                 resolver,
             },
         )
-    }
-
-    /// Search for a definition's source and cache its syntax tree
-    pub fn source<DB: HirDatabase, Def: HasSource<'db, DB>>(
-        &self,
-        def: Def,
-    ) -> Option<InFile<Def::Ast>>
-    where
-        Def::Ast: AstNode,
-    {
-        // FIXME: source call should go through the parse cache
-        let res = def.source(self.db)?;
-        self.cache(find_root(res.value.syntax()), res.file_id);
-        Some(res)
     }
 
     /// Returns none if the file of the node is not part of a crate.
