@@ -14,8 +14,8 @@ use tt::TextRange;
 
 use crate::{
     db::HirDatabase, Adt, Callee, Const, Enum, ExternCrateDecl, Field, FieldSource, Function, Impl,
-    Label, LifetimeParam, LocalSource, Macro, Module, Param, SelfParam, Static, Struct, Trait,
-    TraitAlias, TypeAlias, TypeOrConstParam, Union, Variant,
+    Label, LifetimeParam, LocalSource, Macro, Module, Param, SelfParam, Semantics, Static, Struct,
+    Trait, TraitAlias, TypeAlias, TypeOrConstParam, Union, Variant,
 };
 
 pub trait HasSource {
@@ -28,6 +28,11 @@ pub trait HasSource {
     /// But we made this method `Option` to support rlib in the future
     /// by <https://github.com/rust-lang/rust-analyzer/issues/6913>
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>>;
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>>;
 }
 
 /// NB: Module is !HasSource, because it has two source nodes at the same time:
@@ -99,6 +104,13 @@ impl HasSource for Field {
         });
         Some(field_source)
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for Adt {
     type Ast = ast::Adt;
@@ -109,11 +121,25 @@ impl HasSource for Adt {
             Adt::Enum(e) => Some(e.source(db)?.map(ast::Adt::Enum)),
         }
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for Struct {
     type Ast = ast::Struct;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
 impl HasSource for Union {
@@ -121,11 +147,25 @@ impl HasSource for Union {
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for Enum {
     type Ast = ast::Enum;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
 impl HasSource for Variant {
@@ -133,11 +173,25 @@ impl HasSource for Variant {
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<ast::Variant>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for Function {
     type Ast = ast::Fn;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
 impl HasSource for Const {
@@ -145,11 +199,25 @@ impl HasSource for Const {
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for Static {
     type Ast = ast::Static;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
 impl HasSource for Trait {
@@ -157,17 +225,38 @@ impl HasSource for Trait {
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for TraitAlias {
     type Ast = ast::TraitAlias;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for TypeAlias {
     type Ast = ast::TypeAlias;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
 impl HasSource for Macro {
@@ -191,11 +280,25 @@ impl HasSource for Macro {
             }
         }
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 impl HasSource for Impl {
     type Ast = ast::Impl;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
 
@@ -205,6 +308,13 @@ impl HasSource for TypeOrConstParam {
         let child_source = self.id.parent.child_source(db.upcast());
         child_source.map(|it| it.get(self.id.local_id).cloned()).transpose()
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 
 impl HasSource for LifetimeParam {
@@ -213,6 +323,13 @@ impl HasSource for LifetimeParam {
         let child_source = self.id.parent.child_source(db.upcast());
         child_source.map(|it| it.get(self.id.local_id).cloned()).transpose()
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 
 impl HasSource for LocalSource {
@@ -220,6 +337,13 @@ impl HasSource for LocalSource {
 
     fn source(self, _: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.source)
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
 
@@ -260,6 +384,13 @@ impl HasSource for Param {
             _ => None,
         }
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 
 impl HasSource for SelfParam {
@@ -272,6 +403,13 @@ impl HasSource for SelfParam {
             .and_then(|params| params.self_param())
             .map(|value| InFile { file_id, value })
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 
 impl HasSource for Label {
@@ -283,6 +421,13 @@ impl HasSource for Label {
         let root = src.file_syntax(db.upcast());
         Some(src.map(|ast| ast.to_node(&root)))
     }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
+    }
 }
 
 impl HasSource for ExternCrateDecl {
@@ -290,5 +435,12 @@ impl HasSource for ExternCrateDecl {
 
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         Some(self.id.lookup(db.upcast()).source(db.upcast()))
+    }
+
+    fn source_with_context<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InFile<Self::Ast>> {
+        todo!()
     }
 }
