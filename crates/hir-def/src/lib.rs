@@ -42,6 +42,8 @@ pub mod generics;
 pub mod lang_item;
 
 pub mod hir;
+mod semantics;
+mod src_with_cashe;
 pub use self::hir::type_ref;
 pub mod body;
 pub mod resolver;

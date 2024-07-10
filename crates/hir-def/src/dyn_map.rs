@@ -21,6 +21,7 @@
 //!
 //! This is a work of fiction. Any similarities to Kotlin's `BindingContext` are
 //! a coincidence.
+pub mod def_to_src;
 pub mod keys;
 
 use std::{

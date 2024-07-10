@@ -179,68 +179,68 @@ impl SourceToDefCtx<'_, '_> {
     }
 
     pub(super) fn trait_to_def(&mut self, src: InFile<&ast::Trait>) -> Option<TraitId> {
-        self.to_def(src, keys::TRAIT)
+        self.to_def(src, keys::TRAIT).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn trait_alias_to_def(
         &mut self,
         src: InFile<&ast::TraitAlias>,
     ) -> Option<TraitAliasId> {
-        self.to_def(src, keys::TRAIT_ALIAS)
+        self.to_def(src, keys::TRAIT_ALIAS).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn impl_to_def(&mut self, src: InFile<&ast::Impl>) -> Option<ImplId> {
-        self.to_def(src, keys::IMPL)
+        self.to_def(src, keys::IMPL).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn fn_to_def(&mut self, src: InFile<&ast::Fn>) -> Option<FunctionId> {
-        self.to_def(src, keys::FUNCTION)
+        self.to_def(src, keys::FUNCTION).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn struct_to_def(&mut self, src: InFile<&ast::Struct>) -> Option<StructId> {
-        self.to_def(src, keys::STRUCT)
+        self.to_def(src, keys::STRUCT).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn enum_to_def(&mut self, src: InFile<&ast::Enum>) -> Option<EnumId> {
-        self.to_def(src, keys::ENUM)
+        self.to_def(src, keys::ENUM).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn union_to_def(&mut self, src: InFile<&ast::Union>) -> Option<UnionId> {
-        self.to_def(src, keys::UNION)
+        self.to_def(src, keys::UNION).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn static_to_def(&mut self, src: InFile<&ast::Static>) -> Option<StaticId> {
-        self.to_def(src, keys::STATIC)
+        self.to_def(src, keys::STATIC).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn const_to_def(&mut self, src: InFile<&ast::Const>) -> Option<ConstId> {
-        self.to_def(src, keys::CONST)
+        self.to_def(src, keys::CONST).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn type_alias_to_def(
         &mut self,
         src: InFile<&ast::TypeAlias>,
     ) -> Option<TypeAliasId> {
-        self.to_def(src, keys::TYPE_ALIAS)
+        self.to_def(src, keys::TYPE_ALIAS).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn record_field_to_def(
         &mut self,
         src: InFile<&ast::RecordField>,
     ) -> Option<FieldId> {
-        self.to_def(src, keys::RECORD_FIELD)
+        self.to_def(src, keys::RECORD_FIELD).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn tuple_field_to_def(&mut self, src: InFile<&ast::TupleField>) -> Option<FieldId> {
-        self.to_def(src, keys::TUPLE_FIELD)
+        self.to_def(src, keys::TUPLE_FIELD).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn block_to_def(&mut self, src: InFile<&ast::BlockExpr>) -> Option<BlockId> {
-        self.to_def(src, keys::BLOCK)
+        self.to_def(src, keys::BLOCK).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn enum_variant_to_def(
         &mut self,
         src: InFile<&ast::Variant>,
     ) -> Option<EnumVariantId> {
-        self.to_def(src, keys::ENUM_VARIANT)
+        self.to_def(src, keys::ENUM_VARIANT).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn extern_crate_to_def(
         &mut self,
         src: InFile<&ast::ExternCrate>,
     ) -> Option<ExternCrateId> {
-        self.to_def(src, keys::EXTERN_CRATE)
+        self.to_def(src, keys::EXTERN_CRATE).inspect(|def| println!("{:?}", def))
     }
     #[allow(dead_code)]
     pub(super) fn use_to_def(&mut self, src: InFile<&ast::Use>) -> Option<UseId> {
-        self.to_def(src, keys::USE)
+        self.to_def(src, keys::USE).inspect(|def| println!("{:?}", def))
     }
     pub(super) fn adt_to_def(
         &mut self,

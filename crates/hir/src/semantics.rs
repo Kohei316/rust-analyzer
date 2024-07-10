@@ -156,6 +156,7 @@ impl<'db, DB> ops::Deref for Semantics<'db, DB> {
 
 impl<'db, DB: HirDatabase> Semantics<'db, DB> {
     pub fn new(db: &DB) -> Semantics<'_, DB> {
+        println!("new");
         let impl_ = SemanticsImpl::new(db);
         Semantics { db, imp: impl_ }
     }
