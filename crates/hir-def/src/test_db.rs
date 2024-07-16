@@ -168,7 +168,7 @@ impl TestDB {
             }
             for decl in module.scope.declarations() {
                 if let ModuleDefId::FunctionId(it) = decl {
-                    let range = it.lookup(self).source(self).value.syntax().text_range();
+                    let range = it.source(self).value.syntax().text_range();
 
                     if !range.contains(position.offset) {
                         continue;

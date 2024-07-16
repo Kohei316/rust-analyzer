@@ -133,22 +133,10 @@ fn check_impl(ra_fixture: &str, allow_none: bool, only_types: bool, display_sour
         visit_module(&db, &def_map, module.local_id, &mut |it| defs.push(it));
     }
     defs.sort_by_key(|def| match def {
-        DefWithBodyId::FunctionId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
-        DefWithBodyId::ConstId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
-        DefWithBodyId::StaticId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
-        DefWithBodyId::VariantId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
+        DefWithBodyId::FunctionId(it) => it.source(&db).value.syntax().text_range().start(),
+        DefWithBodyId::ConstId(it) => it.source(&db).value.syntax().text_range().start(),
+        DefWithBodyId::StaticId(it) => it.source(&db).value.syntax().text_range().start(),
+        DefWithBodyId::VariantId(it) => it.source(&db).value.syntax().text_range().start(),
         DefWithBodyId::InTypeConstId(it) => it.source(&db).syntax().text_range().start(),
     });
     let mut unexpected_type_mismatches = String::new();
@@ -380,22 +368,10 @@ fn infer_with_mismatches(content: &str, include_mismatches: bool) -> String {
     let mut defs: Vec<DefWithBodyId> = Vec::new();
     visit_module(&db, &def_map, module.local_id, &mut |it| defs.push(it));
     defs.sort_by_key(|def| match def {
-        DefWithBodyId::FunctionId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
-        DefWithBodyId::ConstId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
-        DefWithBodyId::StaticId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
-        DefWithBodyId::VariantId(it) => {
-            let loc = it.lookup(&db);
-            loc.source(&db).value.syntax().text_range().start()
-        }
+        DefWithBodyId::FunctionId(it) => it.source(&db).value.syntax().text_range().start(),
+        DefWithBodyId::ConstId(it) => it.source(&db).value.syntax().text_range().start(),
+        DefWithBodyId::StaticId(it) => it.source(&db).value.syntax().text_range().start(),
+        DefWithBodyId::VariantId(it) => it.source(&db).value.syntax().text_range().start(),
         DefWithBodyId::InTypeConstId(it) => it.source(&db).syntax().text_range().start(),
     });
     for def in defs {

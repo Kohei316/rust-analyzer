@@ -132,7 +132,7 @@ impl HasSource for Adt {
 impl HasSource for Struct {
     type Ast = ast::Struct;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -146,7 +146,7 @@ impl HasSource for Struct {
 impl HasSource for Union {
     type Ast = ast::Union;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -159,7 +159,7 @@ impl HasSource for Union {
 impl HasSource for Enum {
     type Ast = ast::Enum;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -172,7 +172,7 @@ impl HasSource for Enum {
 impl HasSource for Variant {
     type Ast = ast::Variant;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<ast::Variant>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -185,7 +185,7 @@ impl HasSource for Variant {
 impl HasSource for Function {
     type Ast = ast::Fn;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -198,7 +198,7 @@ impl HasSource for Function {
 impl HasSource for Const {
     type Ast = ast::Const;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -211,7 +211,7 @@ impl HasSource for Const {
 impl HasSource for Static {
     type Ast = ast::Static;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -224,7 +224,7 @@ impl HasSource for Static {
 impl HasSource for Trait {
     type Ast = ast::Trait;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -237,7 +237,7 @@ impl HasSource for Trait {
 impl HasSource for TraitAlias {
     type Ast = ast::TraitAlias;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -250,7 +250,7 @@ impl HasSource for TraitAlias {
 impl HasSource for TypeAlias {
     type Ast = ast::TypeAlias;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -264,21 +264,13 @@ impl HasSource for Macro {
     type Ast = Either<ast::Macro, ast::Fn>;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
         match self.id {
-            MacroId::Macro2Id(it) => Some(
-                it.lookup(db.upcast())
-                    .source(db.upcast())
-                    .map(ast::Macro::MacroDef)
-                    .map(Either::Left),
-            ),
-            MacroId::MacroRulesId(it) => Some(
-                it.lookup(db.upcast())
-                    .source(db.upcast())
-                    .map(ast::Macro::MacroRules)
-                    .map(Either::Left),
-            ),
-            MacroId::ProcMacroId(it) => {
-                Some(it.lookup(db.upcast()).source(db.upcast()).map(Either::Right))
+            MacroId::Macro2Id(it) => {
+                Some(it.source(db.upcast()).map(ast::Macro::MacroDef).map(Either::Left))
             }
+            MacroId::MacroRulesId(it) => {
+                Some(it.source(db.upcast()).map(ast::Macro::MacroRules).map(Either::Left))
+            }
+            MacroId::ProcMacroId(it) => Some(it.source(db.upcast()).map(Either::Right)),
         }
     }
 
@@ -292,7 +284,7 @@ impl HasSource for Macro {
 impl HasSource for Impl {
     type Ast = ast::Impl;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(
@@ -435,7 +427,7 @@ impl HasSource for ExternCrateDecl {
     type Ast = ast::ExternCrate;
 
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {
-        Some(self.id.lookup(db.upcast()).source(db.upcast()))
+        Some(self.id.source(db.upcast()))
     }
 
     fn source_with_context<DB: HirDatabase>(

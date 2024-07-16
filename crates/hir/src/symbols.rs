@@ -276,12 +276,9 @@ impl<'a> SymbolCollector<'a> {
 
     fn push_decl<'db, L>(&mut self, id: L, is_assoc: bool)
     where
-        L: Lookup<Database<'db> = dyn DefDatabase + 'db> + Into<ModuleDefId>,
-        <L as Lookup>::Data: HasSource,
-        <<L as Lookup>::Data as HasSource>::Value: HasName,
+        L: HasSource<Value: HasName> + Into<ModuleDefId> + Copy,
     {
-        let loc = id.lookup(self.db.upcast());
-        let source = loc.source(self.db.upcast());
+        let source = id.source(self.db.upcast());
         let Some(name_node) = source.value.name() else { return };
         let def = ModuleDef::from(id.into());
         let dec_loc = DeclarationLocation {

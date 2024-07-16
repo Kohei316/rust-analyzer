@@ -169,11 +169,9 @@ pub fn identity_when_valid(_attr: TokenStream, item: TokenStream) -> TokenStream
         // FIXME: I'm sure there's already better way to do this
         let src = match decl_id {
             ModuleDefId::AdtId(AdtId::StructId(struct_id)) => {
-                Some(struct_id.lookup(&db).source(&db).syntax().cloned())
+                Some(struct_id.source(&db).syntax().cloned())
             }
-            ModuleDefId::FunctionId(function_id) => {
-                Some(function_id.lookup(&db).source(&db).syntax().cloned())
-            }
+            ModuleDefId::FunctionId(function_id) => Some(function_id.source(&db).syntax().cloned()),
             _ => None,
         };
 
@@ -202,7 +200,7 @@ pub fn identity_when_valid(_attr: TokenStream, item: TokenStream) -> TokenStream
     }
 
     for impl_id in def_map[local_id].scope.impls() {
-        let src = impl_id.lookup(&db).source(&db);
+        let src = impl_id.source(&db);
         if let Some(macro_file) = src.file_id.macro_file() {
             if macro_file.is_builtin_derive(&db) {
                 let pp = pretty_print_macro_expansion(

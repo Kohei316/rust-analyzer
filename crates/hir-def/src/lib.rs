@@ -52,7 +52,6 @@ mod trace;
 pub mod child_by_source;
 pub mod src;
 pub mod src_def_cashe;
-pub mod src_with_cashe;
 
 pub mod find_path;
 pub mod import_map;
@@ -60,6 +59,7 @@ pub mod visibility;
 
 use intern::Interned;
 pub use rustc_abi as layout;
+use src::HasSource;
 use triomphe::Arc;
 
 #[cfg(test)]
@@ -946,15 +946,14 @@ impl GenericDefId {
         self,
         db: &dyn DefDatabase,
     ) -> (HirFileId, Option<ast::GenericParamList>) {
-        fn file_id_and_params_of_item_loc<Loc>(
+        fn file_id_and_params_of_item_loc<Value>(
             db: &dyn DefDatabase,
-            def: impl for<'db> Lookup<Database<'db> = dyn DefDatabase + 'db, Data = Loc>,
+            def: impl HasSource<Value = Value>,
         ) -> (HirFileId, Option<ast::GenericParamList>)
         where
-            Loc: src::HasSource,
-            Loc::Value: ast::HasGenericParams,
+            Value: ast::HasGenericParams,
         {
-            let src = def.lookup(db).source(db);
+            let src = def.source(db);
             (src.file_id, ast::HasGenericParams::generic_param_list(&src.value))
         }
 

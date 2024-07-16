@@ -419,8 +419,7 @@ impl<'a> DeclValidator<'a> {
             return;
         }
 
-        let struct_loc = struct_id.lookup(self.db.upcast());
-        let struct_src = struct_loc.source(self.db.upcast());
+        let struct_src = struct_id.source(self.db.upcast());
 
         let Some(ast::FieldList::RecordFieldList(struct_fields_list)) =
             struct_src.value.field_list()
@@ -506,8 +505,7 @@ impl<'a> DeclValidator<'a> {
             return;
         }
 
-        let enum_loc = enum_id.lookup(self.db.upcast());
-        let enum_src = enum_loc.source(self.db.upcast());
+        let enum_src = enum_id.source(self.db.upcast());
 
         let Some(enum_variants_list) = enum_src.value.variant_list() else {
             always!(
@@ -615,16 +613,15 @@ impl<'a> DeclValidator<'a> {
         );
     }
 
-    fn create_incorrect_case_diagnostic_for_item_name<N, S, L>(
+    fn create_incorrect_case_diagnostic_for_item_name<N, I>(
         &mut self,
-        item_id: L,
+        item_id: I,
         name: &Name,
         expected_case: CaseType,
         ident_type: IdentType,
     ) where
         N: AstNode + HasName + fmt::Debug,
-        S: HasSource<Value = N>,
-        L: Lookup<Data = S, Database<'a> = dyn DefDatabase + 'a>,
+        I: HasSource<Value = N>,
     {
         let to_expected_case_type = match expected_case {
             CaseType::LowerSnakeCase => to_lower_snake_case,
@@ -637,8 +634,7 @@ impl<'a> DeclValidator<'a> {
             return;
         };
 
-        let item_loc = item_id.lookup(self.db.upcast());
-        let item_src = item_loc.source(self.db.upcast());
+        let item_src = item_id.source(self.db.upcast());
         self.create_incorrect_case_diagnostic_for_ast_node(
             replacement,
             item_src.file_id,

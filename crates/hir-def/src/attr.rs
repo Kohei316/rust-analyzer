@@ -15,6 +15,7 @@ use syntax::{
     ast::{self, HasAttrs},
     AstPtr, SmolStr,
 };
+use tracing::Value;
 use triomphe::Arc;
 
 use crate::{
@@ -603,14 +604,14 @@ impl<'attr> AttrQuery<'attr> {
     }
 }
 
-fn any_has_attrs<'db>(
+fn any_has_attrs<'db, Value>(
     db: &(dyn DefDatabase + 'db),
-    id: impl Lookup<
-        Database<'db> = dyn DefDatabase + 'db,
-        Data = impl HasSource<Value = impl ast::HasAttrs>,
-    >,
-) -> InFile<ast::AnyHasAttrs> {
-    id.lookup(db).source(db).map(ast::AnyHasAttrs::new)
+    id: impl HasSource<Value = Value>,
+) -> InFile<ast::AnyHasAttrs>
+where
+    Value: ast::HasAttrs,
+{
+    id.source(db).map(ast::AnyHasAttrs::new)
 }
 
 fn attrs_from_item_tree_loc<'db, N: ItemTreeNode>(

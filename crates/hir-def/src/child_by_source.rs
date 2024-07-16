@@ -17,7 +17,7 @@ use crate::{
     item_scope::ItemScope,
     item_tree::ItemTreeNode,
     nameres::DefMap,
-    src::{HasChildSource, HasSource},
+    src::{ast_ptr, HasChildSource, HasSource},
     src_def_cashe::SrcDefCacheContext,
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
@@ -133,8 +133,9 @@ impl ChildBySource for ItemScope {
             ids.iter().for_each(|&id| {
                 if let MacroId::MacroRulesId(id) = id {
                     let loc = id.lookup(db);
+                    let ast_ptr = ast_ptr(loc, db);
                     if loc.id.file_id() == file_id {
-                        res[keys::MACRO_RULES].insert(loc.ast_ptr(db).value, id);
+                        res[keys::MACRO_RULES].insert(ast_ptr, id);
                     }
                 }
             })
@@ -348,7 +349,7 @@ fn insert_item_loc<ID, N, Data>(
 {
     let loc = id.lookup(db);
     if loc.item_tree_id().file_id() == file_id {
-        res[key].insert(loc.ast_ptr(db).value, id)
+        res[key].insert(ast_ptr(loc, db), id)
     }
 }
 
