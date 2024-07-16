@@ -1,5 +1,6 @@
 //! keys to be used with `DynMap`
 
+use std::hash::Hash;
 use std::marker::PhantomData;
 
 use hir_expand::{attrs::AttrId, MacroCallId};
@@ -13,35 +14,35 @@ use crate::{
     TraitId, TypeAliasId, TypeOrConstParamId, UnionId, UseId,
 };
 
-pub type Key<K, V> = crate::dyn_map::Key<AstPtr<K>, V, AstPtrPolicy<K, V>>;
+pub type Key<K, V> = crate::dyn_map::Key<K, AstPtr<V>, DefIdPolicy<K, V>>;
 
-pub const BLOCK: Key<ast::BlockExpr, BlockId> = Key::new();
-pub const FUNCTION: Key<ast::Fn, FunctionId> = Key::new();
-pub const CONST: Key<ast::Const, ConstId> = Key::new();
-pub const STATIC: Key<ast::Static, StaticId> = Key::new();
-pub const TYPE_ALIAS: Key<ast::TypeAlias, TypeAliasId> = Key::new();
-pub const IMPL: Key<ast::Impl, ImplId> = Key::new();
-pub const TRAIT: Key<ast::Trait, TraitId> = Key::new();
-pub const TRAIT_ALIAS: Key<ast::TraitAlias, TraitAliasId> = Key::new();
-pub const STRUCT: Key<ast::Struct, StructId> = Key::new();
-pub const UNION: Key<ast::Union, UnionId> = Key::new();
-pub const ENUM: Key<ast::Enum, EnumId> = Key::new();
-pub const EXTERN_CRATE: Key<ast::ExternCrate, ExternCrateId> = Key::new();
-pub const USE: Key<ast::Use, UseId> = Key::new();
+pub const BLOCK: Key<BlockId, ast::BlockExpr> = Key::new();
+pub const FUNCTION: Key<FunctionId, ast::Fn> = Key::new();
+pub const CONST: Key<ConstId, ast::Const> = Key::new();
+pub const STATIC: Key<StaticId, ast::Static> = Key::new();
+pub const TYPE_ALIAS: Key<TypeAliasId, ast::TypeAlias> = Key::new();
+pub const IMPL: Key<ImplId, ast::Impl> = Key::new();
+pub const TRAIT: Key<TraitId, ast::Trait> = Key::new();
+pub const TRAIT_ALIAS: Key<TraitAliasId, ast::TraitAlias> = Key::new();
+pub const STRUCT: Key<StructId, ast::Struct> = Key::new();
+pub const UNION: Key<UnionId, ast::Union> = Key::new();
+pub const ENUM: Key<EnumId, ast::Enum> = Key::new();
+pub const EXTERN_CRATE: Key<ExternCrateId, ast::ExternCrate> = Key::new();
+pub const USE: Key<UseId, ast::Use> = Key::new();
 
-pub const ENUM_VARIANT: Key<ast::Variant, EnumVariantId> = Key::new();
-pub const TUPLE_FIELD: Key<ast::TupleField, FieldId> = Key::new();
-pub const RECORD_FIELD: Key<ast::RecordField, FieldId> = Key::new();
-pub const TYPE_PARAM: Key<ast::TypeParam, TypeOrConstParamId> = Key::new();
-pub const CONST_PARAM: Key<ast::ConstParam, TypeOrConstParamId> = Key::new();
-pub const LIFETIME_PARAM: Key<ast::LifetimeParam, LifetimeParamId> = Key::new();
+pub const ENUM_VARIANT: Key<EnumVariantId, ast::Variant> = Key::new();
+pub const TUPLE_FIELD: Key<FieldId, ast::TupleField> = Key::new();
+pub const RECORD_FIELD: Key<FieldId, ast::RecordField> = Key::new();
+pub const TYPE_PARAM: Key<TypeOrConstParamId, ast::TypeParam> = Key::new();
+pub const CONST_PARAM: Key<TypeOrConstParamId, ast::ConstParam> = Key::new();
+pub const LIFETIME_PARAM: Key<LifetimeParamId, ast::LifetimeParam> = Key::new();
 
-pub const MACRO_RULES: Key<ast::MacroRules, MacroRulesId> = Key::new();
-pub const MACRO2: Key<ast::MacroDef, Macro2Id> = Key::new();
-pub const PROC_MACRO: Key<ast::Fn, ProcMacroId> = Key::new();
-pub const MACRO_CALL: Key<ast::MacroCall, MacroCallId> = Key::new();
-pub const ATTR_MACRO_CALL: Key<ast::Item, MacroCallId> = Key::new();
-pub const DERIVE_MACRO_CALL: Key<ast::Attr, (AttrId, MacroCallId, Box<[Option<MacroCallId>]>)> =
+pub const MACRO_RULES: Key<MacroRulesId, ast::MacroRules> = Key::new();
+pub const MACRO2: Key<Macro2Id, ast::MacroDef> = Key::new();
+pub const PROC_MACRO: Key<ProcMacroId, ast::Fn> = Key::new();
+pub const MACRO_CALL: Key<MacroCallId, ast::MacroCall> = Key::new();
+pub const ATTR_MACRO_CALL: Key<MacroCallId, ast::Item> = Key::new();
+pub const DERIVE_MACRO_CALL: Key<(AttrId, MacroCallId, Box<[Option<MacroCallId>]>), ast::Attr> =
     Key::new();
 
 /// XXX: AST Nodes and SyntaxNodes have identity equality semantics: nodes are
@@ -50,21 +51,21 @@ pub const DERIVE_MACRO_CALL: Key<ast::Attr, (AttrId, MacroCallId, Box<[Option<Ma
 /// In general, we do not guarantee that we have exactly one instance of a
 /// syntax tree for each file. We probably should add such guarantee, but, for
 /// the time being, we will use identity-less AstPtr comparison.
-pub struct AstPtrPolicy<AST, ID> {
-    _phantom: PhantomData<(AST, ID)>,
+pub struct DefIdPolicy<ID, AST> {
+    _phantom: PhantomData<(ID, AST)>,
 }
 
-impl<AST: AstNode + 'static, ID: 'static> Policy for AstPtrPolicy<AST, ID> {
-    type K = AstPtr<AST>;
-    type V = ID;
-    fn insert(map: &mut DynMap, key: AstPtr<AST>, value: ID) {
+impl<AST: AstNode + 'static, ID: Eq + Hash + 'static> Policy for DefIdPolicy<ID, AST> {
+    type K = ID;
+    type V = AstPtr<AST>;
+    fn insert(map: &mut DynMap, key: ID, value: AstPtr<AST>) {
         map.map
-            .entry::<FxHashMap<AstPtr<AST>, ID>>()
+            .entry::<FxHashMap<ID, AstPtr<AST>>>()
             .or_insert_with(Default::default)
             .insert(key, value);
     }
-    fn get<'a>(map: &'a DynMap, key: &AstPtr<AST>) -> Option<&'a ID> {
-        map.map.get::<FxHashMap<AstPtr<AST>, ID>>()?.get(key)
+    fn get<'a>(map: &'a DynMap, key: &ID) -> Option<&'a AstPtr<AST>> {
+        map.map.get::<FxHashMap<ID, AstPtr<AST>>>()?.get(key)
     }
     fn is_empty(map: &DynMap) -> bool {
         map.map.get::<FxHashMap<AstPtr<AST>, ID>>().map_or(true, |it| it.is_empty())

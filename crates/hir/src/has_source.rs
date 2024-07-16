@@ -142,6 +142,7 @@ impl HasSource for Struct {
         todo!()
     }
 }
+
 impl HasSource for Union {
     type Ast = ast::Union;
     fn source(self, db: &dyn HirDatabase) -> Option<InFile<Self::Ast>> {

@@ -42,8 +42,6 @@ pub mod generics;
 pub mod lang_item;
 
 pub mod hir;
-mod semantics;
-mod src_with_cashe;
 pub use self::hir::type_ref;
 pub mod body;
 pub mod resolver;
@@ -53,6 +51,8 @@ mod trace;
 
 pub mod child_by_source;
 pub mod src;
+pub mod src_def_cashe;
+pub mod src_with_cashe;
 
 pub mod find_path;
 pub mod import_map;

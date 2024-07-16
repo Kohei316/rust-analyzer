@@ -17,8 +17,8 @@ use crate::{
     item_scope::ItemScope,
     item_tree::ItemTreeNode,
     nameres::DefMap,
-    semantics::Semantics,
     src::{HasChildSource, HasSource},
+    src_def_cashe::SrcDefCacheContext,
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
     VariantId,
@@ -32,13 +32,17 @@ pub trait ChildBySource {
     }
     fn child_by_source_to(&self, db: &dyn DefDatabase, map: &mut DynMap, file_id: HirFileId);
 
-    fn child_by_source_with_context<S: Semantics>(&self, sema: &S, file_id: HirFileId) -> DynMap {
+    fn child_by_source_with_context<S: SrcDefCacheContext>(
+        &self,
+        sema: &S,
+        file_id: HirFileId,
+    ) -> DynMap {
         let mut res = DynMap::default();
         self.child_by_source_to_with_context(sema, &mut res, file_id);
         res
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -60,7 +64,7 @@ impl ChildBySource for TraitId {
         });
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -84,7 +88,7 @@ impl ChildBySource for ImplId {
         });
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -101,7 +105,7 @@ impl ChildBySource for ModuleId {
         module_data.scope.child_by_source_to(db, res, file_id);
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -194,7 +198,7 @@ impl ChildBySource for ItemScope {
         }
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -218,7 +222,7 @@ impl ChildBySource for VariantId {
         }
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -244,7 +248,7 @@ impl ChildBySource for EnumId {
         });
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -273,7 +277,7 @@ impl ChildBySource for DefWithBodyId {
         }
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
@@ -320,7 +324,7 @@ impl ChildBySource for GenericDefId {
         }
     }
 
-    fn child_by_source_to_with_context<S: Semantics>(
+    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
         &self,
         sema: &S,
         map: &mut DynMap,
