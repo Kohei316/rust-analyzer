@@ -21,7 +21,7 @@ use hir_def::{
     item_scope::ItemScope,
     nameres::DefMap,
     src::HasSource,
-    AssocItemId, DefWithBodyId, HasModule, LocalModuleId, Lookup, ModuleDefId,
+    AssocItemId, DefWithBodyId, HasModule, LocalModuleId, ModuleDefId,
 };
 use hir_expand::{db::ExpandDatabase, InFile};
 use once_cell::race::OnceBool;

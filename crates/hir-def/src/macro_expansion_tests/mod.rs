@@ -41,7 +41,7 @@ use crate::{
     src::HasSource,
     test_db::TestDB,
     tt::Subtree,
-    AdtId, AsMacroCall, Lookup, ModuleDefId,
+    AdtId, AsMacroCall, ModuleDefId,
 };
 
 #[track_caller]

@@ -16,9 +16,9 @@ mod case_conv;
 use std::fmt;
 
 use hir_def::{
-    data::adt::VariantData, db::DefDatabase, hir::Pat, src::HasSource, AdtId, AttrDefId, ConstId,
-    EnumId, FunctionId, ItemContainerId, Lookup, ModuleDefId, ModuleId, StaticId, StructId,
-    TraitId, TypeAliasId,
+    data::adt::VariantData, hir::Pat, src::HasSource, AdtId, AttrDefId, ConstId, EnumId,
+    FunctionId, ItemContainerId, Lookup, ModuleDefId, ModuleId, StaticId, StructId, TraitId,
+    TypeAliasId,
 };
 use hir_expand::{
     name::{AsName, Name},

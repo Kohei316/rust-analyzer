@@ -11,7 +11,6 @@ use std::{
 use base_db::{FileId, FileRange};
 use either::Either;
 use hir_def::{
-    dyn_map::DynMap,
     hir::Expr,
     lower::LowerCtx,
     nameres::MacroSubNs,
@@ -135,7 +134,6 @@ pub struct Semantics<'db, DB> {
 pub struct SemanticsImpl<'db> {
     pub db: &'db dyn HirDatabase,
     s2d_cache: RefCell<SourceToDefCache>,
-    source_def_cache: RefCell<DynMap>,
     /// Rootnode to HirFileId cache
     root_to_file_cache: RefCell<FxHashMap<SyntaxNode, HirFileId>>,
     /// MacroCall to its expansion's MacroFileId cache
@@ -294,17 +292,10 @@ impl<'db, DB: HirDatabase> Semantics<'db, DB> {
 }
 
 impl<'db> SemanticsImpl<'db> {
-    fn source_def_cache(&self) -> &mut DynMap {
-        // let x = self.source_def_cache.borrow_mut().deref_mut();
-        // x
-        todo!()
-    }
-
     fn new(db: &'db dyn HirDatabase) -> Self {
         SemanticsImpl {
             db,
             s2d_cache: Default::default(),
-            source_def_cache: Default::default(),
             root_to_file_cache: Default::default(),
             macro_call_cache: Default::default(),
         }

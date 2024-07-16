@@ -15,7 +15,6 @@ use syntax::{
     ast::{self, HasAttrs},
     AstPtr, SmolStr,
 };
-use tracing::Value;
 use triomphe::Arc;
 
 use crate::{

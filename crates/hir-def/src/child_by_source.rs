@@ -17,8 +17,7 @@ use crate::{
     item_scope::ItemScope,
     item_tree::ItemTreeNode,
     nameres::DefMap,
-    src::{ast_ptr, HasChildSource, HasSource},
-    src_def_cashe::SrcDefCacheContext,
+    src::{ast_ptr, HasChildSource},
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
     VariantId,
@@ -31,23 +30,6 @@ pub trait ChildBySource {
         res
     }
     fn child_by_source_to(&self, db: &dyn DefDatabase, map: &mut DynMap, file_id: HirFileId);
-
-    fn child_by_source_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        file_id: HirFileId,
-    ) -> DynMap {
-        let mut res = DynMap::default();
-        self.child_by_source_to_with_context(sema, &mut res, file_id);
-        res
-    }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    );
 }
 
 impl ChildBySource for TraitId {
@@ -62,15 +44,6 @@ impl ChildBySource for TraitId {
         data.items.iter().for_each(|&(_, item)| {
             add_assoc_item(db, res, file_id, item);
         });
-    }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
     }
 }
 
@@ -87,15 +60,6 @@ impl ChildBySource for ImplId {
             add_assoc_item(db, res, file_id, item);
         });
     }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
-    }
 }
 
 impl ChildBySource for ModuleId {
@@ -103,15 +67,6 @@ impl ChildBySource for ModuleId {
         let def_map = self.def_map(db);
         let module_data = &def_map[self.local_id];
         module_data.scope.child_by_source_to(db, res, file_id);
-    }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
     }
 }
 
@@ -198,15 +153,6 @@ impl ChildBySource for ItemScope {
             }
         }
     }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
-    }
 }
 
 impl ChildBySource for VariantId {
@@ -221,15 +167,6 @@ impl ChildBySource for VariantId {
                 Either::Right(source) => res[keys::RECORD_FIELD].insert(AstPtr::new(&source), id),
             }
         }
-    }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
     }
 }
 
@@ -247,15 +184,6 @@ impl ChildBySource for EnumId {
             res[keys::ENUM_VARIANT]
                 .insert(ast_id_map.get(tree[variant.lookup(db).id.value].ast_id), variant);
         });
-    }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
     }
 }
 
@@ -276,15 +204,6 @@ impl ChildBySource for DefWithBodyId {
             def_map[DefMap::ROOT].scope.child_by_source_to(db, res, file_id);
             res[keys::BLOCK].insert(block.lookup(db).ast_id.to_ptr(db.upcast()), block);
         }
-    }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
     }
 }
 
@@ -323,15 +242,6 @@ impl ChildBySource for GenericDefId {
                 res[keys::LIFETIME_PARAM].insert(AstPtr::new(&ast_param), id);
             }
         }
-    }
-
-    fn child_by_source_to_with_context<S: SrcDefCacheContext>(
-        &self,
-        sema: &S,
-        map: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
     }
 }
 
