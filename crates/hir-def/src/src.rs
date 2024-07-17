@@ -10,7 +10,7 @@ use crate::{
     src_def_cashe::SrcDefCacheContext, trace::Trace, ConstId, EnumId, EnumVariantId, ExternBlockId,
     ExternCrateId, FunctionId, GenericDefId, ImplId, ItemTreeLoc, LocalFieldId,
     LocalLifetimeParamId, LocalTypeOrConstParamId, Macro2Id, MacroRulesId, ProcMacroId, StaticId,
-    StructId, StructLoc, TraitAliasId, TraitId, TypeAliasId, UnionId, UseId, VariantId,
+    StructId, StructLoc, TraitAliasId, TraitId, TypeAliasId, UnionId, UnionLoc, UseId, VariantId,
 };
 
 pub trait HasSource<Loc>
@@ -63,7 +63,7 @@ impl HasSource<StructLoc> for StructId {
     }
 }
 
-impl HasSource for UnionId {
+impl HasSource<UnionLoc> for UnionId {
     type Value = ast::Union;
 
     fn source(self, db: &dyn DefDatabase) -> InFile<Self::Value> {
