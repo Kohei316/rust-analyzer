@@ -3,6 +3,7 @@
 use either::Either;
 use hir_expand::{InFile, Lookup};
 use la_arena::ArenaMap;
+use span::AstIdNode;
 use syntax::{ast, AstNode, AstPtr};
 
 use crate::{
@@ -13,12 +14,13 @@ use crate::{
     StructId, StructLoc, TraitAliasId, TraitId, TypeAliasId, UnionId, UnionLoc, UseId, VariantId,
 };
 
-pub trait HasSource<Loc>
+pub trait HasSource
 where
-    Self: Lookup<Data = Loc>,
-    Loc: ItemTreeLoc<Id = Self::Value>,
+    Self: for<'db> Lookup<Database<'db> = dyn DefDatabase + 'db>,
+    <Self as Lookup>::Data: ItemTreeLoc,
+    <<Self as Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = Self::Value>,
 {
-    type Value: AstNode;
+    type Value: AstNode + AstIdNode;
 
     fn source_with_ctx<CTX: SrcDefCacheContext>(
         &self,
@@ -36,9 +38,20 @@ where
     ) -> InFile<AstPtr<Self::Value>>;
 
     fn source(self, db: &dyn DefDatabase) -> InFile<Self::Value>;
+
+    fn ast_ptr(&self, db: &dyn DefDatabase) -> InFile<AstPtr<Self::Value>> {
+        let loc = self.lookup(db);
+        let id = loc.item_tree_id();
+        let file_id = id.file_id();
+        let tree = id.item_tree(db);
+        let ast_id_map = db.ast_id_map(file_id);
+        let node = &tree[id.value];
+
+        InFile::new(file_id, ast_id_map.get(node.ast_id()))
+    }
 }
 
-impl HasSource<StructLoc> for StructId {
+impl HasSource for StructId {
     type Value = ast::Struct;
 
     fn source(self, db: &dyn DefDatabase) -> InFile<Self::Value> {
@@ -63,7 +76,7 @@ impl HasSource<StructLoc> for StructId {
     }
 }
 
-impl HasSource<UnionLoc> for UnionId {
+impl HasSource for UnionId {
     type Value = ast::Union;
 
     fn source(self, db: &dyn DefDatabase) -> InFile<Self::Value> {

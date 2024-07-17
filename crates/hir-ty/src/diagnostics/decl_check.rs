@@ -16,9 +16,9 @@ mod case_conv;
 use std::fmt;
 
 use hir_def::{
-    data::adt::VariantData, hir::Pat, src::HasSource, AdtId, AttrDefId, ConstId, EnumId,
-    FunctionId, ItemContainerId, Lookup, ModuleDefId, ModuleId, StaticId, StructId, TraitId,
-    TypeAliasId,
+    data::adt::VariantData, hir::Pat, item_tree::ItemTreeNode, src::HasSource, AdtId, AttrDefId,
+    ConstId, EnumId, FunctionId, ItemContainerId, ItemTreeLoc, Lookup, ModuleDefId, ModuleId,
+    StaticId, StructId, TraitId, TypeAliasId,
 };
 use hir_expand::{
     name::{AsName, Name},
@@ -622,6 +622,8 @@ impl<'a> DeclValidator<'a> {
     ) where
         N: AstNode + HasName + fmt::Debug,
         I: HasSource<Value = N>,
+        <I as Lookup>::Data: ItemTreeLoc,
+        <<I as Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = N>,
     {
         let to_expected_case_type = match expected_case {
             CaseType::LowerSnakeCase => to_lower_snake_case,

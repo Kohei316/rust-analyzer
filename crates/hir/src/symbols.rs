@@ -3,8 +3,10 @@
 use base_db::FileRange;
 use hir_def::{
     item_scope::ItemInNs,
+    item_tree::ItemTreeNode,
     src::{HasChildSource, HasSource},
-    AdtId, AssocItemId, DefWithBodyId, HasModule, ImplId, MacroId, ModuleDefId, ModuleId, TraitId,
+    AdtId, AssocItemId, DefWithBodyId, HasModule, ImplId, ItemTreeLoc, Lookup, MacroId,
+    ModuleDefId, ModuleId, TraitId,
 };
 use hir_expand::{HirFileId, InFile};
 use hir_ty::{db::HirDatabase, display::HirDisplay};
@@ -272,9 +274,12 @@ impl<'a> SymbolCollector<'a> {
         }
     }
 
-    fn push_decl<L>(&mut self, id: L, is_assoc: bool)
+    fn push_decl<L, V>(&mut self, id: L, is_assoc: bool)
     where
-        L: HasSource<Value: HasName> + Into<ModuleDefId> + Copy,
+        L: HasSource<Value = V> + Into<ModuleDefId> + Copy,
+        <L as Lookup>::Data: ItemTreeLoc,
+        <<L as Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = V>,
+        V: HasName,
     {
         let source = id.source(self.db.upcast());
         let Some(name_node) = source.value.name() else { return };

@@ -603,11 +603,11 @@ impl<'attr> AttrQuery<'attr> {
     }
 }
 
-fn any_has_attrs<'db, Value>(
-    db: &(dyn DefDatabase + 'db),
-    id: impl HasSource<Value = Value>,
-) -> InFile<ast::AnyHasAttrs>
+fn any_has_attrs<'db, Def, Value>(db: &(dyn DefDatabase + 'db), id: Def) -> InFile<ast::AnyHasAttrs>
 where
+    Def: HasSource<Value = Value>,
+    <Def as hir_expand::Lookup>::Data: ItemTreeLoc,
+    <<Def as hir_expand::Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = Value>,
     Value: ast::HasAttrs,
 {
     id.source(db).map(ast::AnyHasAttrs::new)

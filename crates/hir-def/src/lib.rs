@@ -946,11 +946,14 @@ impl GenericDefId {
         self,
         db: &dyn DefDatabase,
     ) -> (HirFileId, Option<ast::GenericParamList>) {
-        fn file_id_and_params_of_item_loc<Value>(
+        fn file_id_and_params_of_item_loc<Def, Value>(
             db: &dyn DefDatabase,
-            def: impl HasSource<Value = Value>,
+            def: Def,
         ) -> (HirFileId, Option<ast::GenericParamList>)
         where
+            Def: HasSource<Value = Value>,
+            <Def as hir_expand::Lookup>::Data: ItemTreeLoc,
+            <<Def as hir_expand::Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = Value>,
             Value: ast::HasGenericParams,
         {
             let src = def.source(db);
