@@ -10,10 +10,14 @@ use crate::{
     src_def_cashe::SrcDefCacheContext, trace::Trace, ConstId, EnumId, EnumVariantId, ExternBlockId,
     ExternCrateId, FunctionId, GenericDefId, ImplId, ItemTreeLoc, LocalFieldId,
     LocalLifetimeParamId, LocalTypeOrConstParamId, Macro2Id, MacroRulesId, ProcMacroId, StaticId,
-    StructId, TraitAliasId, TraitId, TypeAliasId, UnionId, UseId, VariantId,
+    StructId, StructLoc, TraitAliasId, TraitId, TypeAliasId, UnionId, UseId, VariantId,
 };
 
-pub trait HasSource {
+pub trait HasSource<Loc>
+where
+    Self: Lookup<Data = Loc>,
+    Loc: ItemTreeLoc<Id = Self::Value>,
+{
     type Value: AstNode;
 
     fn source_with_ctx<CTX: SrcDefCacheContext>(
@@ -34,7 +38,7 @@ pub trait HasSource {
     fn source(self, db: &dyn DefDatabase) -> InFile<Self::Value>;
 }
 
-impl HasSource for StructId {
+impl HasSource<StructLoc> for StructId {
     type Value = ast::Struct;
 
     fn source(self, db: &dyn DefDatabase) -> InFile<Self::Value> {
