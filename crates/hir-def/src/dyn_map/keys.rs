@@ -8,8 +8,8 @@ use syntax::{ast, AstNode, AstPtr};
 
 use crate::{
     dyn_map::{DynMap, Policy},
-    BlockId, ConstId, EnumId, EnumVariantId, ExternCrateId, FieldId, FunctionId, ImplId,
-    LifetimeParamId, Macro2Id, MacroRulesId, ProcMacroId, StaticId, StructId, TraitAliasId,
+    BlockId, ConstId, EnumId, EnumVariantId, ExternBlockId, ExternCrateId, FieldId, FunctionId,
+    ImplId, LifetimeParamId, Macro2Id, MacroRulesId, ProcMacroId, StaticId, StructId, TraitAliasId,
     TraitId, TypeAliasId, TypeOrConstParamId, UnionId, UseId,
 };
 
@@ -27,6 +27,7 @@ pub const STRUCT: Key<ast::Struct, StructId> = Key::new();
 pub const UNION: Key<ast::Union, UnionId> = Key::new();
 pub const ENUM: Key<ast::Enum, EnumId> = Key::new();
 pub const EXTERN_CRATE: Key<ast::ExternCrate, ExternCrateId> = Key::new();
+pub const EXTERN_BLOCK: Key<ast::ExternBlock, ExternBlockId> = Key::new();
 pub const USE: Key<ast::Use, UseId> = Key::new();
 
 pub const ENUM_VARIANT: Key<ast::Variant, EnumVariantId> = Key::new();
