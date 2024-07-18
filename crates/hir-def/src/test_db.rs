@@ -15,7 +15,7 @@ use crate::{
     db::DefDatabase,
     nameres::{DefMap, ModuleSource},
     src::HasSource,
-    LocalModuleId, Lookup, ModuleDefId, ModuleId,
+    LocalModuleId, ModuleDefId, ModuleId,
 };
 
 #[salsa::database(
