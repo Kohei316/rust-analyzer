@@ -38,33 +38,33 @@ where
         InFile::new(file_id, ast_id_map.get(node.ast_id()))
     }
 
-    fn source_with_ctx<CTX: SrcDefCacheContext>(
+    fn source_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<Self::Value> {
         let InFile { file_id, value } = self.ast_ptr_with_ctx(db, ctx);
         InFile::new(file_id, value.to_node(&ctx.parse_or_expand(file_id)))
     }
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>>;
 }
 
 impl HasSource for StructId {
     type Value = ast::Struct;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::STRUCT, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::STRUCT, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -72,14 +72,14 @@ impl HasSource for StructId {
 impl HasSource for UnionId {
     type Value = ast::Union;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::UNION, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::UNION, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -87,17 +87,14 @@ impl HasSource for UnionId {
 impl HasSource for EnumId {
     type Value = ast::Enum;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::ENUM, *self, || {
-            let loc = self.lookup(db);
-            ast_ptr(loc, db)
-        });
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::ENUM, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -105,14 +102,15 @@ impl HasSource for EnumId {
 impl HasSource for EnumVariantId {
     type Value = ast::Variant;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::ENUM_VARIANT, *self, || ast_ptr(loc, db));
+        let ast_ptr =
+            ctx.get_or_inset_with(def_to_src::ENUM_VARIANT, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -120,14 +118,14 @@ impl HasSource for EnumVariantId {
 impl HasSource for FunctionId {
     type Value = ast::Fn;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::FUNCTION, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::FUNCTION, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -135,14 +133,14 @@ impl HasSource for FunctionId {
 impl HasSource for ConstId {
     type Value = ast::Const;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::CONST, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::CONST, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -150,14 +148,14 @@ impl HasSource for ConstId {
 impl HasSource for StaticId {
     type Value = ast::Static;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::STATIC, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::STATIC, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -165,14 +163,14 @@ impl HasSource for StaticId {
 impl HasSource for TraitId {
     type Value = ast::Trait;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::TRAIT, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::TRAIT, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -180,14 +178,15 @@ impl HasSource for TraitId {
 impl HasSource for TraitAliasId {
     type Value = ast::TraitAlias;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::TRAIT_ALIAS, *self, || ast_ptr(loc, db));
+        let ast_ptr =
+            ctx.get_or_inset_with(def_to_src::TRAIT_ALIAS, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -195,14 +194,15 @@ impl HasSource for TraitAliasId {
 impl HasSource for TypeAliasId {
     type Value = ast::TypeAlias;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::TYPE_ALIAS, *self, || ast_ptr(loc, db));
+        let ast_ptr =
+            ctx.get_or_inset_with(def_to_src::TYPE_ALIAS, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -210,14 +210,14 @@ impl HasSource for TypeAliasId {
 impl HasSource for Macro2Id {
     type Value = ast::MacroDef;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::MACRO2, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::MACRO2, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -225,14 +225,15 @@ impl HasSource for Macro2Id {
 impl HasSource for MacroRulesId {
     type Value = ast::MacroRules;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::MACRO_RULES, *self, || ast_ptr(loc, db));
+        let ast_ptr =
+            ctx.get_or_inset_with(def_to_src::MACRO_RULES, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -240,14 +241,15 @@ impl HasSource for MacroRulesId {
 impl HasSource for ProcMacroId {
     type Value = ast::Fn;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::PROC_MACRO, *self, || ast_ptr(loc, db));
+        let ast_ptr =
+            ctx.get_or_inset_with(def_to_src::PROC_MACRO, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -255,14 +257,14 @@ impl HasSource for ProcMacroId {
 impl HasSource for ImplId {
     type Value = ast::Impl;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::IMPL, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::IMPL, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -270,14 +272,15 @@ impl HasSource for ImplId {
 impl HasSource for ExternCrateId {
     type Value = ast::ExternCrate;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::EXTERN_CRATE, *self, || ast_ptr(loc, db));
+        let ast_ptr =
+            ctx.get_or_inset_with(def_to_src::EXTERN_CRATE, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -285,14 +288,15 @@ impl HasSource for ExternCrateId {
 impl HasSource for ExternBlockId {
     type Value = ast::ExternBlock;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::EXTERN_BLOCK, *self, || ast_ptr(loc, db));
+        let ast_ptr =
+            ctx.get_or_inset_with(def_to_src::EXTERN_BLOCK, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
 }
@@ -300,33 +304,16 @@ impl HasSource for ExternBlockId {
 impl HasSource for UseId {
     type Value = ast::Use;
 
-    fn ast_ptr_with_ctx<CTX: SrcDefCacheContext>(
+    fn ast_ptr_with_ctx<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
-        ctx: &CTX,
+        ctx: &Ctx,
     ) -> InFile<AstPtr<Self::Value>> {
         let loc = self.lookup(db);
         let file_id = loc.item_tree_id().file_id();
-        let ast_ptr = ctx.get_or_inset_with(def_to_src::USE, *self, || ast_ptr(loc, db));
+        let ast_ptr = ctx.get_or_inset_with(def_to_src::USE, *self, || self.ast_ptr(db).value);
         InFile::new(file_id, ast_ptr)
     }
-}
-
-pub fn ast_ptr<Loc>(
-    loc: Loc,
-    db: &dyn DefDatabase,
-) -> AstPtr<<<Loc as ItemTreeLoc>::Id as ItemTreeNode>::Source>
-where
-    Loc: ItemTreeLoc,
-    Loc::Id: ItemTreeNode,
-{
-    let id = loc.item_tree_id();
-    let file_id = id.file_id();
-    let tree = id.item_tree(db);
-    let ast_id_map = db.ast_id_map(file_id);
-    let node = &tree[id.value];
-
-    ast_id_map.get(node.ast_id())
 }
 
 pub trait HasChildSource<ChildId> {

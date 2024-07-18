@@ -17,7 +17,7 @@ use crate::{
     item_scope::ItemScope,
     item_tree::ItemTreeNode,
     nameres::DefMap,
-    src::{ast_ptr, HasChildSource},
+    src::{HasChildSource, HasSource},
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
     VariantId,
@@ -30,6 +30,17 @@ pub trait ChildBySource {
         res
     }
     fn child_by_source_to(&self, db: &dyn DefDatabase, map: &mut DynMap, file_id: HirFileId);
+    // fn child_by_source_with_context(&self, db: &dyn DefDatabase, file_id: HirFileId) -> DynMap {
+    //     let mut res = DynMap::default();
+    //     self.child_by_source_to(db, &mut res, file_id);
+    //     res
+    // }
+    // fn child_by_source_to_with_context(
+    //     &self,
+    //     db: &dyn DefDatabase,
+    //     map: &mut DynMap,
+    //     file_id: HirFileId,
+    // );
 }
 
 impl ChildBySource for TraitId {
@@ -87,10 +98,8 @@ impl ChildBySource for ItemScope {
         self.legacy_macros().for_each(|(_, ids)| {
             ids.iter().for_each(|&id| {
                 if let MacroId::MacroRulesId(id) = id {
-                    let loc = id.lookup(db);
-                    let ast_ptr = ast_ptr(loc, db);
-                    if loc.id.file_id() == file_id {
-                        res[keys::MACRO_RULES].insert(ast_ptr, id);
+                    if id.lookup(db).id.file_id() == file_id {
+                        res[keys::MACRO_RULES].insert(id.ast_ptr(db).value, id);
                     }
                 }
             })
@@ -245,21 +254,20 @@ impl ChildBySource for GenericDefId {
     }
 }
 
-fn insert_item_loc<ID, N, Data>(
+fn insert_item_loc<ID, N>(
     db: &dyn DefDatabase,
     res: &mut DynMap,
     file_id: HirFileId,
     id: ID,
-    key: Key<N::Source, ID>,
+    key: Key<N, ID>,
 ) where
-    ID: for<'db> Lookup<Database<'db> = dyn DefDatabase + 'db, Data = Data> + 'static,
-    Data: ItemTreeLoc<Id = N>,
-    N: ItemTreeNode,
-    N::Source: 'static,
+    ID: HasSource<Value = N> + 'static,
+    <ID as Lookup>::Data: ItemTreeLoc,
+    <<ID as Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = N>,
+    N: syntax::AstNode + 'static,
 {
-    let loc = id.lookup(db);
-    if loc.item_tree_id().file_id() == file_id {
-        res[key].insert(ast_ptr(loc, db), id)
+    if id.lookup(db).item_tree_id().file_id() == file_id {
+        res[key].insert(id.ast_ptr(db).value, id)
     }
 }
 
