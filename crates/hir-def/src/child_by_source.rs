@@ -6,18 +6,19 @@
 
 use either::Either;
 use hir_expand::{attrs::collect_attrs, HirFileId};
-use syntax::{ast, AstPtr};
+use syntax::{ast, AstNode, AstPtr};
 
 use crate::{
     db::DefDatabase,
     dyn_map::{
-        keys::{self, Key},
-        DynMap,
+        keys::{self, AstPtrPolicy, Key},
+        DynMap, KeyMap,
     },
     item_scope::ItemScope,
     item_tree::ItemTreeNode,
     nameres::DefMap,
     src::{HasChildSource, HasSource},
+    src_def_cashe::SrcDefCacheContext,
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
     VariantId,
@@ -30,17 +31,23 @@ pub trait ChildBySource {
         res
     }
     fn child_by_source_to(&self, db: &dyn DefDatabase, map: &mut DynMap, file_id: HirFileId);
-    // fn child_by_source_with_context(&self, db: &dyn DefDatabase, file_id: HirFileId) -> DynMap {
-    //     let mut res = DynMap::default();
-    //     self.child_by_source_to(db, &mut res, file_id);
-    //     res
-    // }
-    // fn child_by_source_to_with_context(
-    //     &self,
-    //     db: &dyn DefDatabase,
-    //     map: &mut DynMap,
-    //     file_id: HirFileId,
-    // );
+    fn child_by_source_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        file_id: HirFileId,
+    ) -> DynMap {
+        let mut res = DynMap::default();
+        self.child_by_source_to(db, &mut res, file_id);
+        res
+    }
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    );
 }
 
 impl ChildBySource for TraitId {
@@ -55,6 +62,16 @@ impl ChildBySource for TraitId {
         data.items.iter().for_each(|&(_, item)| {
             add_assoc_item(db, res, file_id, item);
         });
+    }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
     }
 }
 
@@ -71,6 +88,16 @@ impl ChildBySource for ImplId {
             add_assoc_item(db, res, file_id, item);
         });
     }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
+    }
 }
 
 impl ChildBySource for ModuleId {
@@ -78,6 +105,16 @@ impl ChildBySource for ModuleId {
         let def_map = self.def_map(db);
         let module_data = &def_map[self.local_id];
         module_data.scope.child_by_source_to(db, res, file_id);
+    }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
     }
 }
 
@@ -162,6 +199,16 @@ impl ChildBySource for ItemScope {
             }
         }
     }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
+    }
 }
 
 impl ChildBySource for VariantId {
@@ -176,6 +223,16 @@ impl ChildBySource for VariantId {
                 Either::Right(source) => res[keys::RECORD_FIELD].insert(AstPtr::new(&source), id),
             }
         }
+    }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
     }
 }
 
@@ -193,6 +250,16 @@ impl ChildBySource for EnumId {
             res[keys::ENUM_VARIANT]
                 .insert(ast_id_map.get(tree[variant.lookup(db).id.value].ast_id), variant);
         });
+    }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
     }
 }
 
@@ -213,6 +280,16 @@ impl ChildBySource for DefWithBodyId {
             def_map[DefMap::ROOT].scope.child_by_source_to(db, res, file_id);
             res[keys::BLOCK].insert(block.lookup(db).ast_id.to_ptr(db.upcast()), block);
         }
+    }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
     }
 }
 
@@ -252,6 +329,16 @@ impl ChildBySource for GenericDefId {
             }
         }
     }
+
+    fn child_by_source_to_with_context<Ctx: SrcDefCacheContext>(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Ctx,
+        map: &mut DynMap,
+        file_id: HirFileId,
+    ) {
+        todo!()
+    }
 }
 
 fn insert_item_loc<ID, N>(
@@ -268,6 +355,25 @@ fn insert_item_loc<ID, N>(
 {
     if id.lookup(db).item_tree_id().file_id() == file_id {
         res[key].insert(id.ast_ptr(db).value, id)
+    }
+}
+
+fn _insert_item_loc<ID, N, F>(
+    db: &dyn DefDatabase,
+    f: F,
+    res: &mut DynMap,
+    file_id: HirFileId,
+    id: ID,
+    key: Key<N, ID>,
+) where
+    ID: HasSource<Value = N> + 'static,
+    <ID as Lookup>::Data: ItemTreeLoc,
+    <<ID as Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = N>,
+    N: syntax::AstNode + 'static,
+    F: FnOnce(&mut KeyMap<Key<N, ID>>, ID) -> (),
+{
+    if id.lookup(db).item_tree_id().file_id() == file_id {
+        f(&mut res[key], id)
     }
 }
 
