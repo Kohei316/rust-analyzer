@@ -358,25 +358,6 @@ fn insert_item_loc<ID, N>(
     }
 }
 
-fn _insert_item_loc<ID, N, F>(
-    db: &dyn DefDatabase,
-    f: F,
-    res: &mut DynMap,
-    file_id: HirFileId,
-    id: ID,
-    key: Key<N, ID>,
-) where
-    ID: HasSource<Value = N> + 'static,
-    <ID as Lookup>::Data: ItemTreeLoc,
-    <<ID as Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = N>,
-    N: syntax::AstNode + 'static,
-    F: FnOnce(&mut KeyMap<Key<N, ID>>, ID) -> (),
-{
-    if id.lookup(db).item_tree_id().file_id() == file_id {
-        f(&mut res[key], id)
-    }
-}
-
 fn add_assoc_item(db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId, item: AssocItemId) {
     match item {
         AssocItemId::FunctionId(func) => insert_item_loc(db, res, file_id, func, keys::FUNCTION),
