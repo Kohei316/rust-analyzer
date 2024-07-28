@@ -39,19 +39,18 @@ where
     }
 
     fn ast_ptr(&self, db: &dyn DefDatabase) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by(db, |this| {
-            let loc = this.lookup(db);
-            let id = loc.item_tree_id();
-            let file_id = id.file_id();
-            let tree = id.item_tree(db);
-            let ast_id_map = db.ast_id_map(file_id);
-            let node = &tree[id.value];
+        let file_id = self.lookup(db).item_tree_id().file_id();
+        let loc = self.lookup(db);
+        let id = loc.item_tree_id();
+        let tree = id.item_tree(db);
+        let ast_id_map = db.ast_id_map(file_id);
+        let node = &tree[id.value];
+        let ast_ptr = ast_id_map.get(node.ast_id());
 
-            ast_id_map.get(node.ast_id())
-        })
+        InFile::new(file_id, ast_ptr)
     }
 
-    fn source_with_ctx<Ctx: SrcDefCacheContext>(
+    fn source_with<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
@@ -66,17 +65,7 @@ where
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>>;
 
-    fn ast_ptr_by<F>(&self, db: &dyn DefDatabase, f: F) -> InFile<AstPtr<Self::Value>>
-    where
-        F: FnOnce(&Self) -> AstPtr<Self::Value>,
-    {
-        let file_id = self.lookup(db).item_tree_id().file_id();
-        let ast_ptr = f(&self);
-
-        InFile::new(file_id, ast_ptr)
-    }
-
-    fn ast_ptr_by_key<Ctx: SrcDefCacheContext>(
+    fn ast_ptr_with_by_key<Ctx: SrcDefCacheContext>(
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
@@ -100,7 +89,7 @@ impl HasSource for StructId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::STRUCT)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::STRUCT)
     }
 }
 
@@ -112,7 +101,7 @@ impl HasSource for UnionId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::UNION)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::UNION)
     }
 }
 
@@ -124,7 +113,7 @@ impl HasSource for EnumId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::ENUM)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::ENUM)
     }
 }
 
@@ -136,7 +125,7 @@ impl HasSource for EnumVariantId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::ENUM_VARIANT)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::ENUM_VARIANT)
     }
 }
 
@@ -148,7 +137,7 @@ impl HasSource for FunctionId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::FUNCTION)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::FUNCTION)
     }
 }
 
@@ -160,7 +149,7 @@ impl HasSource for ConstId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::CONST)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::CONST)
     }
 }
 
@@ -172,7 +161,7 @@ impl HasSource for StaticId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::STATIC)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::STATIC)
     }
 }
 
@@ -184,7 +173,7 @@ impl HasSource for TraitId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::TRAIT)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::TRAIT)
     }
 }
 
@@ -196,7 +185,7 @@ impl HasSource for TraitAliasId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::TRAIT_ALIAS)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::TRAIT_ALIAS)
     }
 }
 
@@ -208,7 +197,7 @@ impl HasSource for TypeAliasId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::TYPE_ALIAS)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::TYPE_ALIAS)
     }
 }
 
@@ -220,7 +209,7 @@ impl HasSource for Macro2Id {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::MACRO2)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::MACRO2)
     }
 }
 
@@ -232,7 +221,7 @@ impl HasSource for MacroRulesId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::MACRO_RULES)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::MACRO_RULES)
     }
 }
 
@@ -244,7 +233,7 @@ impl HasSource for ProcMacroId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::PROC_MACRO)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::PROC_MACRO)
     }
 }
 
@@ -256,7 +245,7 @@ impl HasSource for ImplId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::IMPL)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::IMPL)
     }
 }
 
@@ -268,7 +257,7 @@ impl HasSource for ExternCrateId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::EXTERN_CRATE)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::EXTERN_CRATE)
     }
 }
 
@@ -280,7 +269,7 @@ impl HasSource for ExternBlockId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::EXTERN_BLOCK)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::EXTERN_BLOCK)
     }
 }
 
@@ -292,7 +281,7 @@ impl HasSource for UseId {
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
     ) -> InFile<AstPtr<Self::Value>> {
-        self.ast_ptr_by_key(db, ctx, def_to_src::USE)
+        self.ast_ptr_with_by_key(db, ctx, def_to_src::USE)
     }
 }
 
