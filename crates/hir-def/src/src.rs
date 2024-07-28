@@ -3,7 +3,6 @@
 use either::Either;
 use hir_expand::{InFile, Lookup};
 use la_arena::ArenaMap;
-use profile::countme::Counts;
 use span::AstIdNode;
 use syntax::{ast, AstNode, AstPtr};
 
