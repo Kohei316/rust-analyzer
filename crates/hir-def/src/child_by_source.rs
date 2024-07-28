@@ -18,56 +18,38 @@ use crate::{
     item_tree::ItemTreeNode,
     nameres::DefMap,
     src::{HasChildSource, HasSource},
-    src_def_cashe::{SrcDefCacheContext, SrcDefCacheContextExt},
+    src_def_cashe::SrcDefCacheContext,
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
     VariantId,
 };
 
-pub trait ChildBySource {
+pub trait ChildBySource<Ctx>
+where
+    Ctx: SrcDefCacheContext,
+{
     fn child_by_source(&self, db: &dyn DefDatabase, file_id: HirFileId) -> DynMap {
         let mut res = DynMap::default();
-        self.child_by_source_to(db, &mut res, file_id);
+        self.child_by_source_to(db, &None::<Ctx>, &mut res, file_id);
         res
     }
-    fn child_by_source_to(&self, db: &dyn DefDatabase, map: &mut DynMap, file_id: HirFileId);
-    fn child_by_source_with<Ctx: SrcDefCacheContext>(
+    fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        file_id: HirFileId,
-    ) -> DynMap {
-        let mut res = DynMap::default();
-        self.child_by_source_to_with(db, ctx, &mut res, file_id);
-        res
-    }
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
-        &self,
-        db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
-        res: &mut DynMap,
+        map: &mut DynMap,
         file_id: HirFileId,
     );
 }
 
-impl ChildBySource for TraitId {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
-        let data = db.trait_data(*self);
-
-        data.attribute_calls().filter(|(ast_id, _)| ast_id.file_id == file_id).for_each(
-            |(ast_id, call_id)| {
-                res[keys::ATTR_MACRO_CALL].insert(ast_id.to_ptr(db.upcast()), call_id);
-            },
-        );
-        data.items.iter().for_each(|&(_, item)| {
-            add_assoc_item(db, res, file_id, item);
-        });
-    }
-
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
+impl<Ctx> ChildBySource<Ctx> for TraitId
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
+        _ctx: &Option<Ctx>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -84,8 +66,17 @@ impl ChildBySource for TraitId {
     }
 }
 
-impl ChildBySource for ImplId {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
+impl<Ctx> ChildBySource<Ctx> for ImplId
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
+        &self,
+        db: &dyn DefDatabase,
+        _ctx: &Option<Ctx>,
+        res: &mut DynMap,
+        file_id: HirFileId,
+    ) {
         let data = db.impl_data(*self);
         // FIXME: Macro calls
         data.attribute_calls().filter(|(ast_id, _)| ast_id.file_id == file_id).for_each(
@@ -97,38 +88,36 @@ impl ChildBySource for ImplId {
             add_assoc_item(db, res, file_id, item);
         });
     }
+}
 
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
+impl<Ctx> ChildBySource<Ctx> for ModuleId
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
-        todo!()
-    }
-}
-
-impl ChildBySource for ModuleId {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
         let def_map = self.def_map(db);
         let module_data = &def_map[self.local_id];
-        module_data.scope.child_by_source_to(db, res, file_id);
-    }
-
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
-        &self,
-        db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
-        res: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
+        module_data.scope.child_by_source_to(db, ctx, res, file_id);
     }
 }
 
-impl ChildBySource for ItemScope {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
+impl<Ctx> ChildBySource<Ctx> for ItemScope
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
+        &self,
+        db: &dyn DefDatabase,
+        _ctx: &Option<Ctx>,
+        res: &mut DynMap,
+        file_id: HirFileId,
+    ) {
         self.declarations().for_each(|item| add_module_def(db, res, file_id, item));
         self.impls().for_each(|imp| insert_item_loc(db, res, file_id, imp, keys::IMPL));
         self.extern_crate_decls()
@@ -208,21 +197,20 @@ impl ChildBySource for ItemScope {
             }
         }
     }
-
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
-        &self,
-        db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
-        res: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
-    }
 }
 
-impl ChildBySource for VariantId {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, _: HirFileId) {
-        let arena_map = self.child_source(db, &None);
+impl<Ctx> ChildBySource<Ctx> for VariantId
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
+        &self,
+        db: &dyn DefDatabase,
+        _ctx: &Option<Ctx>,
+        res: &mut DynMap,
+        _: HirFileId,
+    ) {
+        let arena_map = self.child_source(db, &None::<Ctx>);
         let arena_map = arena_map.as_ref();
         let parent = *self;
         for (local_id, source) in arena_map.value.iter() {
@@ -233,20 +221,19 @@ impl ChildBySource for VariantId {
             }
         }
     }
+}
 
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
+impl<Ctx> ChildBySource<Ctx> for EnumId
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
+        _ctx: &Option<Ctx>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
-        todo!()
-    }
-}
-
-impl ChildBySource for EnumId {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
         let loc = &self.lookup(db);
         if file_id != loc.id.file_id() {
             return;
@@ -260,23 +247,22 @@ impl ChildBySource for EnumId {
                 .insert(ast_id_map.get(tree[variant.lookup(db).id.value].ast_id), variant);
         });
     }
+}
 
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
+impl<Ctx> ChildBySource<Ctx> for DefWithBodyId
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
-        todo!()
-    }
-}
-
-impl ChildBySource for DefWithBodyId {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
         let (body, sm) = db.body_with_source_map(*self);
         if let &DefWithBodyId::VariantId(v) = self {
-            VariantId::EnumVariantId(v).child_by_source_to(db, res, file_id)
+            VariantId::EnumVariantId(v).child_by_source_to(db, ctx, res, file_id)
         }
 
         sm.expansions().filter(|(ast, _)| ast.file_id == file_id).for_each(|(ast, &exp_id)| {
@@ -286,25 +272,24 @@ impl ChildBySource for DefWithBodyId {
         for (block, def_map) in body.blocks(db) {
             // All block expressions are merged into the same map, because they logically all add
             // inner items to the containing `DefWithBodyId`.
-            def_map[DefMap::ROOT].scope.child_by_source_to(db, res, file_id);
+            def_map[DefMap::ROOT].scope.child_by_source_to(db, ctx, res, file_id);
             res[keys::BLOCK].insert(block.lookup(db).ast_id.to_ptr(db.upcast()), block);
         }
     }
+}
 
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
+impl<Ctx> ChildBySource<Ctx> for GenericDefId
+where
+    Ctx: SrcDefCacheContext,
+{
+    fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
-        todo!()
-    }
-}
-
-impl ChildBySource for GenericDefId {
-    fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
-        let (gfile_id, generic_params_list) = self.file_id_and_params_of(db, &None);
+        let (gfile_id, generic_params_list) = self.file_id_and_params_of(db, ctx);
         if gfile_id != file_id {
             return;
         }
@@ -337,16 +322,6 @@ impl ChildBySource for GenericDefId {
                 res[keys::LIFETIME_PARAM].insert(AstPtr::new(&ast_param), id);
             }
         }
-    }
-
-    fn child_by_source_to_with<Ctx: SrcDefCacheContext>(
-        &self,
-        db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
-        res: &mut DynMap,
-        file_id: HirFileId,
-    ) {
-        todo!()
     }
 }
 
