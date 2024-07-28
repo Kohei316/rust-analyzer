@@ -5,7 +5,10 @@ use std::marker::PhantomData;
 
 use hir_expand::{attrs::AttrId, MacroCallId};
 use rustc_hash::FxHashMap;
-use syntax::{ast, AstNode, AstPtr};
+use syntax::{
+    ast::{self, Variant},
+    AstNode, AstPtr,
+};
 
 use crate::{
     dyn_map::{DynMap, Policy},
@@ -18,6 +21,7 @@ pub type Key<K, V> = crate::dyn_map::Key<K, AstPtr<V>, DefIdPolicy<K, V>>;
 
 pub const BLOCK: Key<BlockId, ast::BlockExpr> = Key::new();
 pub const FUNCTION: Key<FunctionId, ast::Fn> = Key::new();
+pub const Variant: Key<Variant, ast::Variant> = Key::new();
 pub const CONST: Key<ConstId, ast::Const> = Key::new();
 pub const STATIC: Key<StaticId, ast::Static> = Key::new();
 pub const TYPE_ALIAS: Key<TypeAliasId, ast::TypeAlias> = Key::new();

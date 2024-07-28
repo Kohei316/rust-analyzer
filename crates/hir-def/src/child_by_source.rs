@@ -18,7 +18,7 @@ use crate::{
     item_tree::ItemTreeNode,
     nameres::DefMap,
     src::{HasChildSource, HasSource},
-    src_def_cashe::SrcDefCacheContext,
+    src_def_cashe::{SrcDefCacheContext, SrcDefCacheContextExt},
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
     VariantId,
@@ -45,7 +45,7 @@ pub trait ChildBySource {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     );
 }
@@ -68,10 +68,19 @@ impl ChildBySource for TraitId {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
-        todo!()
+        let data = db.trait_data(*self);
+
+        data.attribute_calls().filter(|(ast_id, _)| ast_id.file_id == file_id).for_each(
+            |(ast_id, call_id)| {
+                res[keys::ATTR_MACRO_CALL].insert(ast_id.to_ptr(db.upcast()), call_id);
+            },
+        );
+        data.items.iter().for_each(|&(_, item)| {
+            add_assoc_item(db, res, file_id, item);
+        });
     }
 }
 
@@ -93,7 +102,7 @@ impl ChildBySource for ImplId {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
         todo!()
@@ -111,7 +120,7 @@ impl ChildBySource for ModuleId {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
         todo!()
@@ -204,7 +213,7 @@ impl ChildBySource for ItemScope {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
         todo!()
@@ -213,7 +222,7 @@ impl ChildBySource for ItemScope {
 
 impl ChildBySource for VariantId {
     fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, _: HirFileId) {
-        let arena_map = self.child_source(db);
+        let arena_map = self.child_source(db, &None);
         let arena_map = arena_map.as_ref();
         let parent = *self;
         for (local_id, source) in arena_map.value.iter() {
@@ -229,7 +238,7 @@ impl ChildBySource for VariantId {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
         todo!()
@@ -256,7 +265,7 @@ impl ChildBySource for EnumId {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
         todo!()
@@ -286,7 +295,7 @@ impl ChildBySource for DefWithBodyId {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
         todo!()
@@ -295,7 +304,7 @@ impl ChildBySource for DefWithBodyId {
 
 impl ChildBySource for GenericDefId {
     fn child_by_source_to(&self, db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId) {
-        let (gfile_id, generic_params_list) = self.file_id_and_params_of(db);
+        let (gfile_id, generic_params_list) = self.file_id_and_params_of(db, &None);
         if gfile_id != file_id {
             return;
         }
@@ -334,7 +343,7 @@ impl ChildBySource for GenericDefId {
         &self,
         db: &dyn DefDatabase,
         ctx: &Option<Ctx>,
-        map: &mut DynMap,
+        res: &mut DynMap,
         file_id: HirFileId,
     ) {
         todo!()

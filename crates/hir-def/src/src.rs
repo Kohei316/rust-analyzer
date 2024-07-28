@@ -4,7 +4,7 @@ use either::Either;
 use hir_expand::{InFile, Lookup};
 use la_arena::ArenaMap;
 use span::AstIdNode;
-use syntax::{ast, AstNode, AstPtr};
+use syntax::{ast, AstPtr};
 
 use crate::{
     data::adt::lower_struct,
@@ -24,13 +24,12 @@ use crate::{
 
 pub trait HasSource
 where
-    Self: Sized,
-    Self: Copy,
+    Self: Sized + Copy,
     Self: for<'db> Lookup<Database<'db> = dyn DefDatabase + 'db>,
     <Self as Lookup>::Data: ItemTreeLoc,
     <<Self as Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = Self::Value>,
 {
-    type Value: AstNode + AstIdNode;
+    type Value: AstIdNode;
 
     fn source(&self, db: &dyn DefDatabase) -> InFile<Self::Value> {
         let InFile { file_id, value } = self.ast_ptr(db);
@@ -139,6 +138,18 @@ impl HasSource for FunctionId {
         self.ast_ptr_with_by_key(db, ctx, def_to_src::FUNCTION)
     }
 }
+
+// impl HasSource for VariantId {
+//     type Value = ast::Variant;
+
+//     fn ast_ptr_with<Ctx: SrcDefCacheContext>(
+//         &self,
+//         db: &dyn DefDatabase,
+//         ctx: &Option<Ctx>,
+//     ) -> InFile<AstPtr<Self::Value>> {
+//         self.ast_ptr_with_by_key(db, ctx, def_to_src::Variant)
+//     }
+// }
 
 impl HasSource for ConstId {
     type Value = ast::Const;
@@ -284,20 +295,31 @@ impl HasSource for UseId {
     }
 }
 
-pub trait HasChildSource<ChildId> {
+pub trait HasChildSource<ChildId, Ctx>
+where
+    Ctx: SrcDefCacheContext,
+{
     type Value;
-    fn child_source(&self, db: &dyn DefDatabase) -> InFile<ArenaMap<ChildId, Self::Value>>;
+    fn child_source(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Option<Ctx>,
+    ) -> InFile<ArenaMap<ChildId, Self::Value>>;
 
     // fn _child_source(&self, db: &dyn DefDatabase, f: F) -> InFile<ArenaMap<ChildId, Self::Value>>
     // where
     //     F: FnOnce(Id) -> InFile<Id::Value>;
 }
 
-impl HasChildSource<la_arena::Idx<ast::UseTree>> for UseId {
+impl<Ctx> HasChildSource<la_arena::Idx<ast::UseTree>, Ctx> for UseId
+where
+    Ctx: SrcDefCacheContext,
+{
     type Value = ast::UseTree;
     fn child_source(
         &self,
         db: &dyn DefDatabase,
+        _ctx: &Option<Ctx>,
     ) -> InFile<ArenaMap<la_arena::Idx<ast::UseTree>, Self::Value>> {
         let loc = &self.lookup(db);
         let use_ = &loc.id.item_tree(db)[loc.id.value];
@@ -308,16 +330,23 @@ impl HasChildSource<la_arena::Idx<ast::UseTree>> for UseId {
     }
 }
 
-impl HasChildSource<LocalTypeOrConstParamId> for GenericDefId {
+impl<Ctx> HasChildSource<LocalTypeOrConstParamId, Ctx> for GenericDefId
+where
+    Ctx: SrcDefCacheContext,
+{
     type Value = Either<ast::TypeOrConstParam, ast::TraitOrAlias>;
     fn child_source(
         &self,
         db: &dyn DefDatabase,
-    ) -> InFile<ArenaMap<LocalTypeOrConstParamId, Self::Value>> {
+        ctx: &Option<Ctx>,
+    ) -> InFile<ArenaMap<LocalTypeOrConstParamId, Self::Value>>
+    where
+        Ctx: SrcDefCacheContext,
+    {
         let generic_params = db.generic_params(*self);
         let mut idx_iter = generic_params.iter_type_or_consts().map(|(idx, _)| idx);
 
-        let (file_id, generic_params_list) = self.file_id_and_params_of(db);
+        let (file_id, generic_params_list) = self.file_id_and_params_of(db, ctx);
 
         let mut params = ArenaMap::default();
 
@@ -325,12 +354,12 @@ impl HasChildSource<LocalTypeOrConstParamId> for GenericDefId {
         // the other params.
         match *self {
             GenericDefId::TraitId(id) => {
-                let trait_ref = id.source(db).value;
+                let trait_ref = id.source_with(db, ctx).value;
                 let idx = idx_iter.next().unwrap();
                 params.insert(idx, Either::Right(ast::TraitOrAlias::Trait(trait_ref)));
             }
             GenericDefId::TraitAliasId(id) => {
-                let alias = id.source(db).value;
+                let alias = id.source_with(db, ctx).value;
                 let idx = idx_iter.next().unwrap();
                 params.insert(idx, Either::Right(ast::TraitOrAlias::TraitAlias(alias)));
             }
@@ -347,16 +376,20 @@ impl HasChildSource<LocalTypeOrConstParamId> for GenericDefId {
     }
 }
 
-impl HasChildSource<LocalLifetimeParamId> for GenericDefId {
+impl<Ctx> HasChildSource<LocalLifetimeParamId, Ctx> for GenericDefId
+where
+    Ctx: SrcDefCacheContext,
+{
     type Value = ast::LifetimeParam;
     fn child_source(
         &self,
         db: &dyn DefDatabase,
+        ctx: &Option<Ctx>,
     ) -> InFile<ArenaMap<LocalLifetimeParamId, Self::Value>> {
         let generic_params = db.generic_params(*self);
         let idx_iter = generic_params.iter_lt().map(|(idx, _)| idx);
 
-        let (file_id, generic_params_list) = self.file_id_and_params_of(db);
+        let (file_id, generic_params_list) = self.file_id_and_params_of(db, ctx);
 
         let mut params = ArenaMap::default();
 
@@ -370,17 +403,24 @@ impl HasChildSource<LocalLifetimeParamId> for GenericDefId {
     }
 }
 
-impl HasChildSource<LocalFieldId> for VariantId {
+impl<Ctx> HasChildSource<LocalFieldId, Ctx> for VariantId
+where
+    Ctx: SrcDefCacheContext,
+{
     type Value = Either<ast::TupleField, ast::RecordField>;
 
-    fn child_source(&self, db: &dyn DefDatabase) -> InFile<ArenaMap<LocalFieldId, Self::Value>> {
+    fn child_source(
+        &self,
+        db: &dyn DefDatabase,
+        ctx: &Option<Ctx>,
+    ) -> InFile<ArenaMap<LocalFieldId, Self::Value>> {
         let item_tree;
         let (src, fields, container) = match *self {
             VariantId::EnumVariantId(it) => {
                 let lookup = it.lookup(db);
                 item_tree = it.lookup(db).id.item_tree(db);
                 (
-                    it.source(db).map(|it| it.kind()),
+                    it.source_with(db, ctx).map(|it| it.kind()),
                     &item_tree[lookup.id.value].fields,
                     lookup.parent.lookup(db).container,
                 )
@@ -389,7 +429,7 @@ impl HasChildSource<LocalFieldId> for VariantId {
                 let lookup = it.lookup(db);
                 item_tree = lookup.id.item_tree(db);
                 (
-                    it.source(db).map(|it| it.kind()),
+                    it.source_with(db, ctx).map(|it| it.kind()),
                     &item_tree[lookup.id.value].fields,
                     lookup.container,
                 )
@@ -398,7 +438,7 @@ impl HasChildSource<LocalFieldId> for VariantId {
                 let lookup = it.lookup(db);
                 item_tree = lookup.id.item_tree(db);
                 (
-                    it.source(db).map(|it| it.kind()),
+                    it.source_with(db, ctx).map(|it| it.kind()),
                     &item_tree[lookup.id.value].fields,
                     lookup.container,
                 )
