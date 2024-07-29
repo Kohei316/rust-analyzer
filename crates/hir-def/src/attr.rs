@@ -7,6 +7,7 @@ use cfg::{CfgExpr, CfgOptions};
 use either::Either;
 use hir_expand::{
     attrs::{collect_attrs, Attr, AttrId, RawAttrs},
+    name::known::Option,
     HirFileId, InFile,
 };
 use la_arena::{ArenaMap, Idx, RawIdx};
@@ -23,6 +24,7 @@ use crate::{
     lang_item::LangItem,
     nameres::{ModuleOrigin, ModuleSource},
     src::{HasChildSource, HasSource},
+    src_def_cashe::SrcDefCacheContext,
     AdtId, AttrDefId, GenericParamId, HasModule, ItemTreeLoc, LocalFieldId, Lookup, MacroId,
     VariantId,
 };
@@ -320,7 +322,10 @@ impl AttrsWithOwner {
         Self { attrs: db.attrs(owner), owner }
     }
 
-    pub(crate) fn attrs_query(db: &dyn DefDatabase, def: AttrDefId) -> Attrs {
+    pub(crate) fn attrs_query<Ctx>(db: &dyn DefDatabase, def: AttrDefId) -> Attrs
+    where
+        Ctx: SrcDefCacheContext,
+    {
         let _p = tracing::info_span!("attrs_query").entered();
         // FIXME: this should use `Trace` to avoid duplication in `source_map` below
         let raw_attrs = match def {
@@ -375,7 +380,7 @@ impl AttrsWithOwner {
             AttrDefId::TypeAliasId(it) => attrs_from_item_tree_loc(db, it),
             AttrDefId::GenericParamId(it) => match it {
                 GenericParamId::ConstParamId(it) => {
-                    let src = it.parent().child_source(db);
+                    let src = it.parent().child_source(db, &None::<Ctx>);
                     // FIXME: We should be never getting `None` here.
                     match src.value.get(it.local_id()) {
                         Some(val) => RawAttrs::from_attrs_owner(
@@ -387,7 +392,7 @@ impl AttrsWithOwner {
                     }
                 }
                 GenericParamId::TypeParamId(it) => {
-                    let src = it.parent().child_source(db);
+                    let src = it.parent().child_source(db, &None::<Ctx>);
                     // FIXME: We should be never getting `None` here.
                     match src.value.get(it.local_id()) {
                         Some(val) => RawAttrs::from_attrs_owner(
@@ -399,7 +404,7 @@ impl AttrsWithOwner {
                     }
                 }
                 GenericParamId::LifetimeParamId(it) => {
-                    let src = it.parent.child_source(db);
+                    let src = it.parent.child_source(db, &None::<Ctx>);
                     // FIXME: We should be never getting `None` here.
                     match src.value.get(it.local_id) {
                         Some(val) => RawAttrs::from_attrs_owner(
@@ -420,7 +425,10 @@ impl AttrsWithOwner {
         Attrs(attrs)
     }
 
-    pub fn source_map(&self, db: &dyn DefDatabase) -> AttrSourceMap {
+    pub fn source_map<Ctx>(&self, db: &dyn DefDatabase, ctx: &Option<Ctx>) -> AttrSourceMap
+    where
+        Ctx: SrcDefCacheContext,
+    {
         let owner = match self.owner {
             AttrDefId::ModuleId(module) => {
                 // Modules can have 2 attribute owners (the `mod x;` item, and the module file itself).
@@ -478,15 +486,15 @@ impl AttrsWithOwner {
             AttrDefId::GenericParamId(id) => match id {
                 GenericParamId::ConstParamId(id) => id
                     .parent()
-                    .child_source(db)
+                    .child_source(db, ctx)
                     .map(|source| ast::AnyHasAttrs::new(source[id.local_id()].clone())),
                 GenericParamId::TypeParamId(id) => id
                     .parent()
-                    .child_source(db)
+                    .child_source(db, ctx)
                     .map(|source| ast::AnyHasAttrs::new(source[id.local_id()].clone())),
                 GenericParamId::LifetimeParamId(id) => id
                     .parent
-                    .child_source(db)
+                    .child_source(db, ctx)
                     .map(|source| ast::AnyHasAttrs::new(source[id.local_id].clone())),
             },
             AttrDefId::ExternBlockId(id) => any_has_attrs(db, id),
