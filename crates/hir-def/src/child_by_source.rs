@@ -43,7 +43,7 @@ impl ChildBySource for TraitId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &mut Option<DefToSrcCacheContext<'_>>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -55,7 +55,7 @@ impl ChildBySource for TraitId {
             },
         );
         data.items.iter().for_each(|&(_, item)| {
-            add_assoc_item(db, res, file_id, item);
+            add_assoc_item(db, ctx, res, file_id, item);
         });
     }
 }
@@ -64,7 +64,7 @@ impl ChildBySource for ImplId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &mut Option<DefToSrcCacheContext<'_>>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -76,7 +76,7 @@ impl ChildBySource for ImplId {
             },
         );
         data.items.iter().for_each(|&item| {
-            add_assoc_item(db, res, file_id, item);
+            add_assoc_item(db, ctx, res, file_id, item);
         });
     }
 }
@@ -99,17 +99,17 @@ impl ChildBySource for ItemScope {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &mut Option<DefToSrcCacheContext<'_>>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
-        self.declarations().for_each(|item| add_module_def(db, res, file_id, item));
-        self.impls().for_each(|imp| insert_item_loc(db, res, file_id, imp, keys::IMPL));
+        self.declarations().for_each(|item| add_module_def(db, ctx, res, file_id, item));
+        self.impls().for_each(|imp| insert_item_loc(db, ctx, res, file_id, imp, keys::IMPL));
         self.extern_crate_decls()
-            .for_each(|ext| insert_item_loc(db, res, file_id, ext, keys::EXTERN_CRATE));
-        self.use_decls().for_each(|ext| insert_item_loc(db, res, file_id, ext, keys::USE));
+            .for_each(|ext| insert_item_loc(db, ctx, res, file_id, ext, keys::EXTERN_CRATE));
+        self.use_decls().for_each(|ext| insert_item_loc(db, ctx, res, file_id, ext, keys::USE));
         self.unnamed_consts()
-            .for_each(|konst| insert_item_loc(db, res, file_id, konst, keys::CONST));
+            .for_each(|konst| insert_item_loc(db, ctx, res, file_id, konst, keys::CONST));
         self.attr_macro_invocs().filter(|(id, _)| id.file_id == file_id).for_each(
             |(ast_id, call_id)| {
                 res[keys::ATTR_MACRO_CALL].insert(ast_id.to_ptr(db.upcast()), call_id);
@@ -119,7 +119,7 @@ impl ChildBySource for ItemScope {
             ids.iter().for_each(|&id| {
                 if let MacroId::MacroRulesId(id) = id {
                     if id.lookup(db).id.file_id() == file_id {
-                        res[keys::MACRO_RULES].insert(id.ast_ptr(db).value, id);
+                        res[keys::MACRO_RULES].insert(id.ast_ptr_with(db, ctx).value, id);
                     }
                 }
             })
@@ -145,35 +145,40 @@ impl ChildBySource for ItemScope {
         );
         fn add_module_def(
             db: &dyn DefDatabase,
+            ctx: &mut Option<DefToSrcCacheContext<'_>>,
             map: &mut DynMap,
             file_id: HirFileId,
             item: ModuleDefId,
         ) {
             match item {
                 ModuleDefId::FunctionId(id) => {
-                    insert_item_loc(db, map, file_id, id, keys::FUNCTION)
+                    insert_item_loc(db, ctx, map, file_id, id, keys::FUNCTION)
                 }
-                ModuleDefId::ConstId(id) => insert_item_loc(db, map, file_id, id, keys::CONST),
+                ModuleDefId::ConstId(id) => insert_item_loc(db, ctx, map, file_id, id, keys::CONST),
                 ModuleDefId::TypeAliasId(id) => {
-                    insert_item_loc(db, map, file_id, id, keys::TYPE_ALIAS)
+                    insert_item_loc(db, ctx, map, file_id, id, keys::TYPE_ALIAS)
                 }
-                ModuleDefId::StaticId(id) => insert_item_loc(db, map, file_id, id, keys::STATIC),
-                ModuleDefId::TraitId(id) => insert_item_loc(db, map, file_id, id, keys::TRAIT),
+                ModuleDefId::StaticId(id) => {
+                    insert_item_loc(db, ctx, map, file_id, id, keys::STATIC)
+                }
+                ModuleDefId::TraitId(id) => insert_item_loc(db, ctx, map, file_id, id, keys::TRAIT),
                 ModuleDefId::TraitAliasId(id) => {
-                    insert_item_loc(db, map, file_id, id, keys::TRAIT_ALIAS)
+                    insert_item_loc(db, ctx, map, file_id, id, keys::TRAIT_ALIAS)
                 }
                 ModuleDefId::AdtId(adt) => match adt {
-                    AdtId::StructId(id) => insert_item_loc(db, map, file_id, id, keys::STRUCT),
-                    AdtId::UnionId(id) => insert_item_loc(db, map, file_id, id, keys::UNION),
-                    AdtId::EnumId(id) => insert_item_loc(db, map, file_id, id, keys::ENUM),
+                    AdtId::StructId(id) => insert_item_loc(db, ctx, map, file_id, id, keys::STRUCT),
+                    AdtId::UnionId(id) => insert_item_loc(db, ctx, map, file_id, id, keys::UNION),
+                    AdtId::EnumId(id) => insert_item_loc(db, ctx, map, file_id, id, keys::ENUM),
                 },
                 ModuleDefId::MacroId(id) => match id {
-                    MacroId::Macro2Id(id) => insert_item_loc(db, map, file_id, id, keys::MACRO2),
+                    MacroId::Macro2Id(id) => {
+                        insert_item_loc(db, ctx, map, file_id, id, keys::MACRO2)
+                    }
                     MacroId::MacroRulesId(id) => {
-                        insert_item_loc(db, map, file_id, id, keys::MACRO_RULES)
+                        insert_item_loc(db, ctx, map, file_id, id, keys::MACRO_RULES)
                     }
                     MacroId::ProcMacroId(id) => {
-                        insert_item_loc(db, map, file_id, id, keys::PROC_MACRO)
+                        insert_item_loc(db, ctx, map, file_id, id, keys::PROC_MACRO)
                     }
                 },
                 ModuleDefId::ModuleId(_)
@@ -300,6 +305,7 @@ impl ChildBySource for GenericDefId {
 
 fn insert_item_loc<ID, N>(
     db: &dyn DefDatabase,
+    ctx: &mut Option<DefToSrcCacheContext<'_>>,
     res: &mut DynMap,
     file_id: HirFileId,
     id: ID,
@@ -311,14 +317,24 @@ fn insert_item_loc<ID, N>(
     N: syntax::AstNode + 'static,
 {
     if id.lookup(db).item_tree_id().file_id() == file_id {
-        res[key].insert(id.ast_ptr(db).value, id)
+        res[key].insert(id.ast_ptr_with(db, ctx).value, id)
     }
 }
 
-fn add_assoc_item(db: &dyn DefDatabase, res: &mut DynMap, file_id: HirFileId, item: AssocItemId) {
+fn add_assoc_item(
+    db: &dyn DefDatabase,
+    ctx: &mut Option<DefToSrcCacheContext<'_>>,
+    res: &mut DynMap,
+    file_id: HirFileId,
+    item: AssocItemId,
+) {
     match item {
-        AssocItemId::FunctionId(func) => insert_item_loc(db, res, file_id, func, keys::FUNCTION),
-        AssocItemId::ConstId(konst) => insert_item_loc(db, res, file_id, konst, keys::CONST),
-        AssocItemId::TypeAliasId(ty) => insert_item_loc(db, res, file_id, ty, keys::TYPE_ALIAS),
+        AssocItemId::FunctionId(func) => {
+            insert_item_loc(db, ctx, res, file_id, func, keys::FUNCTION)
+        }
+        AssocItemId::ConstId(konst) => insert_item_loc(db, ctx, res, file_id, konst, keys::CONST),
+        AssocItemId::TypeAliasId(ty) => {
+            insert_item_loc(db, ctx, res, file_id, ty, keys::TYPE_ALIAS)
+        }
     }
 }
