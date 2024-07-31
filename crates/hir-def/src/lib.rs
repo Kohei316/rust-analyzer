@@ -60,7 +60,7 @@ pub mod visibility;
 use intern::Interned;
 pub use rustc_abi as layout;
 use src::HasSource;
-use src_def_cashe::SrcDefCacheContext;
+use src_def_cashe::DefToSrcCacheContext;
 use triomphe::Arc;
 
 #[cfg(test)]
@@ -943,21 +943,17 @@ impl_from!(
 );
 
 impl GenericDefId {
-    fn file_id_and_params_of<Ctx>(
+    fn file_id_and_params_of(
         self,
         db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
-    ) -> (HirFileId, Option<ast::GenericParamList>)
-    where
-        Ctx: SrcDefCacheContext,
-    {
-        fn file_id_and_params_of_item_loc<Ctx, Def, Value>(
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
+    ) -> (HirFileId, Option<ast::GenericParamList>) {
+        fn file_id_and_params_of_item_loc<Def, Value>(
             db: &dyn DefDatabase,
-            ctx: &Option<Ctx>,
+            ctx: &mut Option<DefToSrcCacheContext<'_>>,
             def: Def,
         ) -> (HirFileId, Option<ast::GenericParamList>)
         where
-            Ctx: SrcDefCacheContext,
             Def: HasSource<Value = Value>,
             <Def as hir_expand::Lookup>::Data: ItemTreeLoc,
             <<Def as hir_expand::Lookup>::Data as ItemTreeLoc>::Id: ItemTreeNode<Source = Value>,

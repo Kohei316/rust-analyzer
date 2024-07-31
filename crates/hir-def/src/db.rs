@@ -21,7 +21,6 @@ use crate::{
     item_tree::{AttrOwner, ItemTree},
     lang_item::{self, LangItem, LangItemTarget, LangItems},
     nameres::{diagnostics::DefDiagnostics, DefMap},
-    src_def_cashe::SrcDefCacheContext,
     visibility::{self, Visibility},
     AttrDefId, BlockId, BlockLoc, ConstBlockId, ConstBlockLoc, ConstId, ConstLoc, DefWithBodyId,
     EnumId, EnumLoc, EnumVariantId, EnumVariantLoc, ExternBlockId, ExternBlockLoc, ExternCrateId,
@@ -198,7 +197,7 @@ pub trait DefDatabase: InternDatabase + ExpandDatabase + Upcast<dyn ExpandDataba
     ) -> Arc<ArenaMap<LocalFieldId, AstPtr<Either<ast::TupleField, ast::RecordField>>>>;
 
     #[salsa::invoke(AttrsWithOwner::attrs_query)]
-    fn attrs<Ctx: SrcDefCacheContext>(&self, def: AttrDefId) -> Attrs;
+    fn attrs(&self, def: AttrDefId) -> Attrs;
 
     #[salsa::transparent]
     #[salsa::invoke(lang_item::lang_attr)]

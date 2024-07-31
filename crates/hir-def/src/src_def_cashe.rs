@@ -22,19 +22,19 @@ pub struct DefToSrcCacheContext<'cache> {
 }
 
 impl<'cache> DefToSrcCacheContext<'cache> {
-    fn get<Def, Ast>(
+    pub fn get<Def, Ast>(
         &self,
         map_key: Key<Def, AstPtr<Ast>, DefIdPolicy<Def, Ast>>,
         key: Def,
     ) -> Option<AstPtr<Ast>>
     where
         Def: Eq + Hash + 'static,
-        Ast: AstNode + Copy + 'static,
+        Ast: AstNode + 'static,
     {
         self.cache[map_key].get(&key).copied()
     }
 
-    fn insert_with<Def, Ast, F>(
+    pub fn insert_with<Def, Ast, F>(
         &mut self,
         map_key: Key<Def, AstPtr<Ast>, DefIdPolicy<Def, Ast>>,
         key: Def,
@@ -42,7 +42,7 @@ impl<'cache> DefToSrcCacheContext<'cache> {
     ) -> AstPtr<Ast>
     where
         Def: Eq + Hash + 'static + Copy,
-        Ast: AstNode + Copy + 'static,
+        Ast: AstNode + 'static,
         F: FnOnce(Def) -> AstPtr<Ast>,
     {
         let ast_ptr = f(key);
@@ -50,7 +50,7 @@ impl<'cache> DefToSrcCacheContext<'cache> {
         ast_ptr
     }
 
-    fn get_insert_with<Def, Ast, F>(
+    pub fn get_or_insert_with<Def, Ast, F>(
         &mut self,
         map_key: Key<Def, AstPtr<Ast>, DefIdPolicy<Def, Ast>>,
         key: Def,
@@ -58,7 +58,7 @@ impl<'cache> DefToSrcCacheContext<'cache> {
     ) -> AstPtr<Ast>
     where
         Def: Eq + Hash + 'static + Copy,
-        Ast: AstNode + Copy + 'static,
+        Ast: AstNode + 'static,
         F: FnOnce(Def) -> AstPtr<Ast>,
     {
         self.get(map_key, key).unwrap_or_else(|| self.insert_with(map_key, key, f))

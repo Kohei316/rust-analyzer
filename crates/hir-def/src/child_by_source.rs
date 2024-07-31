@@ -18,38 +18,32 @@ use crate::{
     item_tree::ItemTreeNode,
     nameres::DefMap,
     src::{HasChildSource, HasSource},
-    src_def_cashe::SrcDefCacheContext,
+    src_def_cashe::DefToSrcCacheContext,
     AdtId, AssocItemId, DefWithBodyId, EnumId, FieldId, GenericDefId, ImplId, ItemTreeLoc,
     LifetimeParamId, Lookup, MacroId, ModuleDefId, ModuleId, TraitId, TypeOrConstParamId,
     VariantId,
 };
 
-pub trait ChildBySource<Ctx>
-where
-    Ctx: SrcDefCacheContext,
-{
+pub trait ChildBySource {
     fn child_by_source(&self, db: &dyn DefDatabase, file_id: HirFileId) -> DynMap {
         let mut res = DynMap::default();
-        self.child_by_source_to(db, &None::<Ctx>, &mut res, file_id);
+        self.child_by_source_to(db, &mut None, &mut res, file_id);
         res
     }
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         map: &mut DynMap,
         file_id: HirFileId,
     );
 }
 
-impl<Ctx> ChildBySource<Ctx> for TraitId
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for TraitId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &Option<Ctx>,
+        _ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -66,14 +60,11 @@ where
     }
 }
 
-impl<Ctx> ChildBySource<Ctx> for ImplId
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for ImplId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &Option<Ctx>,
+        _ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -90,14 +81,11 @@ where
     }
 }
 
-impl<Ctx> ChildBySource<Ctx> for ModuleId
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for ModuleId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -107,14 +95,11 @@ where
     }
 }
 
-impl<Ctx> ChildBySource<Ctx> for ItemScope
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for ItemScope {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &Option<Ctx>,
+        _ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -199,18 +184,15 @@ where
     }
 }
 
-impl<Ctx> ChildBySource<Ctx> for VariantId
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for VariantId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &Option<Ctx>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         _: HirFileId,
     ) {
-        let arena_map = self.child_source(db, &None::<Ctx>);
+        let arena_map = self.child_source(db, ctx);
         let arena_map = arena_map.as_ref();
         let parent = *self;
         for (local_id, source) in arena_map.value.iter() {
@@ -223,14 +205,11 @@ where
     }
 }
 
-impl<Ctx> ChildBySource<Ctx> for EnumId
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for EnumId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        _ctx: &Option<Ctx>,
+        _ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -249,14 +228,11 @@ where
     }
 }
 
-impl<Ctx> ChildBySource<Ctx> for DefWithBodyId
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for DefWithBodyId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
@@ -278,14 +254,11 @@ where
     }
 }
 
-impl<Ctx> ChildBySource<Ctx> for GenericDefId
-where
-    Ctx: SrcDefCacheContext,
-{
+impl ChildBySource for GenericDefId {
     fn child_by_source_to(
         &self,
         db: &dyn DefDatabase,
-        ctx: &Option<Ctx>,
+        ctx: &mut Option<DefToSrcCacheContext<'_>>,
         res: &mut DynMap,
         file_id: HirFileId,
     ) {
