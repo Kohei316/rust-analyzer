@@ -74,7 +74,7 @@ where
         let file_id = self.lookup(db).item_tree_id().file_id();
         ctx.as_mut()
             .map(|ctx| {
-                let ast_ptr = ctx.get_or_insert_with(map_key, *self, |_| self.ast_ptr(db).value);
+                let ast_ptr = *ctx.entry(map_key, *self).or_insert_with(|| self.ast_ptr(db).value);
                 InFile::new(file_id, ast_ptr)
             })
             .unwrap_or_else(|| self.ast_ptr(db))

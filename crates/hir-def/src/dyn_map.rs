@@ -102,6 +102,9 @@ impl<P: Policy> KeyMap<Key<P::K, P::V, P>> {
     pub fn get(&self, key: &P::K) -> Option<&P::V> {
         P::get(&self.map, key)
     }
+    pub fn entry(&mut self, key: P::K) -> Entry<'_, P::K, P::V> {
+        P::entry(&mut self.map, key)
+    }
 
     pub fn is_empty(&self) -> bool {
         P::is_empty(&self.map)

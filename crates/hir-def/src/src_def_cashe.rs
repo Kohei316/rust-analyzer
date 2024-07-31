@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::{collections::hash_map::Entry, hash::Hash};
 
 use syntax::{AstNode, AstPtr};
 
@@ -22,45 +22,15 @@ pub struct DefToSrcCacheContext<'cache> {
 }
 
 impl<'cache> DefToSrcCacheContext<'cache> {
-    pub fn get<Def, Ast>(
-        &self,
+    pub fn entry<Def, Ast>(
+        &mut self,
         map_key: Key<Def, AstPtr<Ast>, DefIdPolicy<Def, Ast>>,
         key: Def,
-    ) -> Option<AstPtr<Ast>>
+    ) -> Entry<'_, Def, AstPtr<Ast>>
     where
         Def: Eq + Hash + 'static,
         Ast: AstNode + 'static,
     {
-        self.cache[map_key].get(&key).copied()
-    }
-
-    pub fn insert_with<Def, Ast, F>(
-        &mut self,
-        map_key: Key<Def, AstPtr<Ast>, DefIdPolicy<Def, Ast>>,
-        key: Def,
-        f: F,
-    ) -> AstPtr<Ast>
-    where
-        Def: Eq + Hash + 'static + Copy,
-        Ast: AstNode + 'static,
-        F: FnOnce(Def) -> AstPtr<Ast>,
-    {
-        let ast_ptr = f(key);
-        self.cache[map_key].insert(key, ast_ptr);
-        ast_ptr
-    }
-
-    pub fn get_or_insert_with<Def, Ast, F>(
-        &mut self,
-        map_key: Key<Def, AstPtr<Ast>, DefIdPolicy<Def, Ast>>,
-        key: Def,
-        f: F,
-    ) -> AstPtr<Ast>
-    where
-        Def: Eq + Hash + 'static + Copy,
-        Ast: AstNode + 'static,
-        F: FnOnce(Def) -> AstPtr<Ast>,
-    {
-        self.get(map_key, key).unwrap_or_else(|| self.insert_with(map_key, key, f))
+        self.cache[map_key].entry(key)
     }
 }
