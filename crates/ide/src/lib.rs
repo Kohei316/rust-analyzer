@@ -760,7 +760,7 @@ impl Analysis {
         config: &AnnotationConfig,
         file_id: FileId,
     ) -> Cancellable<Vec<Annotation>> {
-        self.with_db(|db| annotations::annotations(db, config, file_id))
+        self.with_db(|db| annotations::annotations(&Semantics::new(db), config, file_id))
     }
 
     pub fn resolve_annotation(&self, annotation: Annotation) -> Cancellable<Annotation> {
