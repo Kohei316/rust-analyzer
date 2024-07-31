@@ -2385,8 +2385,8 @@ impl Const {
         db.const_data(self.id).name.clone()
     }
 
-    pub fn value<DB: HirDatabase>(self, sema: Semantics<'_, DB>) -> Option<ast::Expr> {
-        self.source(&sema)?.value.body()
+    pub fn value<DB: HirDatabase>(self, sema: &Semantics<'_, DB>) -> Option<ast::Expr> {
+        self.source(sema)?.value.body()
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Type {
