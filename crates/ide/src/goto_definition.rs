@@ -51,7 +51,7 @@ pub(crate) fn goto_definition(
     })?;
     if let Some(doc_comment) = token_as_doc_comment(&original_token) {
         return doc_comment.get_definition_with_descend_at(sema, offset, |def, _, link_range| {
-            let nav = def.try_to_nav(db)?;
+            let nav = def.try_to_nav(sema)?;
             Some(RangeInfo::new(link_range, nav.collect()))
         });
     }
@@ -62,7 +62,7 @@ pub(crate) fn goto_definition(
         return Some(RangeInfo::new(
             range,
             match resolution {
-                Some(res) => def_to_nav(db, Definition::from(res)),
+                Some(res) => def_to_nav(sema, Definition::from(res)),
                 None => vec![],
             },
         ));
@@ -99,7 +99,7 @@ pub(crate) fn goto_definition(
                                 .collect();
                         }
                         try_filter_trait_item_definition(sema, &def)
-                            .unwrap_or_else(|| def_to_nav(sema.db, def))
+                            .unwrap_or_else(|| def_to_nav(sema, def))
                     })
                     .collect(),
             )
@@ -151,7 +151,7 @@ fn try_lookup_macro_def_in_macro_use(
     for mod_def in krate.root_module().declarations(sema.db) {
         if let ModuleDef::Macro(mac) = mod_def {
             if mac.name(sema.db).as_str() == Some(token.text()) {
-                if let Some(nav) = mac.try_to_nav(sema.db) {
+                if let Some(nav) = mac.try_to_nav(sema) {
                     return Some(nav.call_site);
                 }
             }
@@ -184,14 +184,14 @@ fn try_filter_trait_item_definition(
                 .items(db)
                 .iter()
                 .filter(|itm| discriminant(*itm) == discriminant_value)
-                .find_map(|itm| (itm.name(db)? == name).then(|| itm.try_to_nav(db)).flatten())
+                .find_map(|itm| (itm.name(db)? == name).then(|| itm.try_to_nav(sema)).flatten())
                 .map(|it| it.collect())
         }
     }
 }
 
-fn def_to_nav(db: &RootDatabase, def: Definition) -> Vec<NavigationTarget> {
-    def.try_to_nav(db).map(|it| it.collect()).unwrap_or_default()
+fn def_to_nav(sema: &Semantics<'_, RootDatabase>, def: Definition) -> Vec<NavigationTarget> {
+    def.try_to_nav(sema).map(|it| it.collect()).unwrap_or_default()
 }
 
 #[cfg(test)]
