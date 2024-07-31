@@ -29,7 +29,7 @@ pub(crate) fn trait_impl_redundant_assoc_item(
             (
                 format!("`fn {redundant_assoc_item_name}`"),
                 function
-                    .source(db)
+                    .source(&ctx.sema)
                     .map(|it| it.syntax().value.text_range())
                     .unwrap_or(default_range),
                 format!("\n    {};", function.display(db)),
@@ -40,7 +40,7 @@ pub(crate) fn trait_impl_redundant_assoc_item(
             (
                 format!("`const {redundant_assoc_item_name}`"),
                 constant
-                    .source(db)
+                    .source(&ctx.sema)
                     .map(|it| it.syntax().value.text_range())
                     .unwrap_or(default_range),
                 format!("\n    {};", constant.display(db)),
@@ -51,7 +51,7 @@ pub(crate) fn trait_impl_redundant_assoc_item(
             (
                 format!("`type {redundant_assoc_item_name}`"),
                 type_alias
-                    .source(db)
+                    .source(&ctx.sema)
                     .map(|it| it.syntax().value.text_range())
                     .unwrap_or(default_range),
                 format!("\n    type {};", type_alias.name(ctx.sema.db).to_smol_str()),
@@ -89,7 +89,7 @@ fn quickfix_for_redundant_assoc_item(
             return None;
         }
 
-        let trait_def = d.trait_.source(db)?.value;
+        let trait_def = d.trait_.source(&ctx.sema)?.value;
         let l_curly = trait_def.assoc_item_list()?.l_curly_token()?.text_range();
         let where_to_insert =
             hir::InFile::new(d.file_id, l_curly).original_node_file_range_rooted(db).range;
