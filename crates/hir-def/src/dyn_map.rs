@@ -25,6 +25,7 @@ pub mod def_to_src;
 pub mod keys;
 
 use std::{
+    collections::hash_map::Entry,
     hash::Hash,
     marker::PhantomData,
     ops::{Index, IndexMut},
@@ -57,6 +58,7 @@ pub trait Policy {
 
     fn insert(map: &mut DynMap, key: Self::K, value: Self::V);
     fn get<'a>(map: &'a DynMap, key: &Self::K) -> Option<&'a Self::V>;
+    fn entry<'a>(map: &'a mut DynMap, key: Self::K) -> Entry<'a, Self::K, Self::V>;
     fn is_empty(map: &DynMap) -> bool;
 }
 
@@ -68,6 +70,9 @@ impl<K: Hash + Eq + 'static, V: 'static> Policy for (K, V) {
     }
     fn get<'a>(map: &'a DynMap, key: &K) -> Option<&'a V> {
         map.map.get::<FxHashMap<K, V>>()?.get(key)
+    }
+    fn entry<'a>(map: &'a mut DynMap, key: K) -> Entry<'a, K, V> {
+        map.map.entry::<FxHashMap<K, V>>().or_insert_with(Default::default).entry(key)
     }
     fn is_empty(map: &DynMap) -> bool {
         map.map.get::<FxHashMap<K, V>>().map_or(true, |it| it.is_empty())
