@@ -371,7 +371,7 @@ pub(crate) fn hover_for_definition(
     let notable_traits = def_ty.map(|ty| notable_traits(db, &ty)).unwrap_or_default();
 
     let markup =
-        render::definition(sema.db, def, famous_defs.as_ref(), &notable_traits, macro_arm, config);
+        render::definition(sema, def, famous_defs.as_ref(), &notable_traits, macro_arm, config);
     HoverResult {
         markup: render::process_markup(sema.db, def, &markup, config),
         actions: [
@@ -453,7 +453,7 @@ fn runnable_action(
     match def {
         Definition::Module(it) => runnable_mod(sema, it).map(HoverAction::Runnable),
         Definition::Function(func) => {
-            let src = func.source(sema.db)?;
+            let src = func.source(sema)?;
             if src.file_id != file_id.into() {
                 cov_mark::hit!(hover_macro_generated_struct_fn_doc_comment);
                 cov_mark::hit!(hover_macro_generated_struct_fn_doc_attr);

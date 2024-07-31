@@ -93,7 +93,7 @@ pub(crate) fn add_missing_match_arms(acc: &mut Assists, ctx: &AssistContext<'_>)
             .into_iter()
             .filter_map(|variant| {
                 Some((
-                    build_pat(ctx.db(), module, variant, cfg)?,
+                    build_pat(&ctx.sema, module, variant, cfg)?,
                     variant.should_be_hidden(ctx.db(), module.krate()),
                 ))
             })
@@ -146,7 +146,7 @@ pub(crate) fn add_missing_match_arms(acc: &mut Assists, ctx: &AssistContext<'_>)
                     .any(|variant| variant.should_be_hidden(ctx.db(), module.krate()));
                 let patterns = variants
                     .into_iter()
-                    .filter_map(|variant| build_pat(ctx.db(), module, variant, cfg));
+                    .filter_map(|variant| build_pat(&ctx.sema, module, variant, cfg));
 
                 (ast::Pat::from(make::tuple_pat(patterns)), is_hidden)
             })
@@ -179,7 +179,7 @@ pub(crate) fn add_missing_match_arms(acc: &mut Assists, ctx: &AssistContext<'_>)
                     .any(|variant| variant.should_be_hidden(ctx.db(), module.krate()));
                 let patterns = variants
                     .into_iter()
-                    .filter_map(|variant| build_pat(ctx.db(), module, variant, cfg));
+                    .filter_map(|variant| build_pat(&ctx.sema, module, variant, cfg));
                 (ast::Pat::from(make::slice_pat(patterns)), is_hidden)
             })
             .filter(|(variant_pat, _)| is_variant_missing(&top_lvl_pats, variant_pat));
@@ -441,16 +441,16 @@ fn resolve_array_of_enum_def(
 }
 
 fn build_pat(
-    db: &RootDatabase,
+    sema: &Semantics<'_, RootDatabase>,
     module: hir::Module,
     var: ExtendedVariant,
     cfg: ImportPathConfig,
 ) -> Option<ast::Pat> {
     match var {
         ExtendedVariant::Variant(var) => {
-            let path = mod_path_to_ast(&module.find_path(db, ModuleDef::from(var), cfg)?);
+            let path = mod_path_to_ast(&module.find_path(sema.db, ModuleDef::from(var), cfg)?);
             // FIXME: use HIR for this; it doesn't currently expose struct vs. tuple vs. unit variants though
-            Some(match var.source(db)?.value.kind() {
+            Some(match var.source(sema)?.value.kind() {
                 ast::StructKind::Tuple(field_list) => {
                     let pats =
                         iter::repeat(make::wildcard_pat().into()).take(field_list.fields().count());

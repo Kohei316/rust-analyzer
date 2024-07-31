@@ -395,7 +395,7 @@ pub(super) fn path(db: &RootDatabase, module: hir::Module, item_name: Option<Str
 }
 
 pub(super) fn definition(
-    db: &RootDatabase,
+    sema: &Semantics<'_, RootDatabase>,
     def: Definition,
     famous_defs: Option<&FamousDefs<'_, '_>>,
     notable_traits: &[(Trait, Vec<(Option<Type>, Name)>)],
@@ -441,7 +441,7 @@ pub(super) fn definition(
                     Ok(it) => {
                         Some(if it >= 10 { format!("{it} ({it:#X})") } else { format!("{it}") })
                     }
-                    Err(_) => it.value(db).map(|it| format!("{it:?}")),
+                    Err(_) => it.value(sema).map(|it| format!("{it:?}")),
                 }
             } else {
                 None
@@ -452,7 +452,7 @@ pub(super) fn definition(
             match body {
                 Ok(it) => Some(it),
                 Err(_) => {
-                    let source = it.source(db)?;
+                    let source = it.source(sema)?;
                     let mut body = source.value.body()?.syntax().clone();
                     if source.file_id.is_macro() {
                         body = insert_whitespace_into_node::insert_ws_into(body);
@@ -462,7 +462,7 @@ pub(super) fn definition(
             }
         }
         Definition::Static(it) => {
-            let source = it.source(db)?;
+            let source = it.source(sema)?;
             let mut body = source.value.body()?.syntax().clone();
             if source.file_id.is_macro() {
                 body = insert_whitespace_into_node::insert_ws_into(body);

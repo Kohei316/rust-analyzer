@@ -1422,8 +1422,8 @@ impl Variant {
         db.enum_variant_data(self.id).variant_data.clone()
     }
 
-    pub fn value(self, db: &dyn HirDatabase) -> Option<ast::Expr> {
-        self.source(db)?.value.expr()
+    pub fn value<DB: HirDatabase>(self, sema: &Semantics<'_, DB>) -> Option<ast::Expr> {
+        self.source(sema)?.value.expr()
     }
 
     pub fn eval(self, db: &dyn HirDatabase) -> Result<i128, ConstEvalError> {
@@ -2244,8 +2244,8 @@ impl Param {
         }
     }
 
-    pub fn pattern_source(self, db: &dyn HirDatabase) -> Option<ast::Pat> {
-        self.source(db).and_then(|p| p.value.right()?.pat())
+    pub fn pattern_source<DB: HirDatabase>(self, sema: &Semantics<'_, DB>) -> Option<ast::Pat> {
+        self.source(sema).and_then(|p| p.value.right()?.pat())
     }
 }
 
@@ -2385,8 +2385,8 @@ impl Const {
         db.const_data(self.id).name.clone()
     }
 
-    pub fn value(self, db: &dyn HirDatabase) -> Option<ast::Expr> {
-        self.source(db)?.value.body()
+    pub fn value<DB: HirDatabase>(self, sema: Semantics<'_, DB>) -> Option<ast::Expr> {
+        self.source(&sema)?.value.body()
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Type {
@@ -2444,8 +2444,8 @@ impl Static {
         db.static_data(self.id).mutable
     }
 
-    pub fn value(self, db: &dyn HirDatabase) -> Option<ast::Expr> {
-        self.source(db)?.value.body()
+    pub fn value<DB: HirDatabase>(self, sema: Semantics<'_, DB>) -> Option<ast::Expr> {
+        self.source(&sema)?.value.body()
     }
 
     pub fn ty(self, db: &dyn HirDatabase) -> Type {
@@ -3802,16 +3802,19 @@ impl Impl {
         self.id.lookup(db.upcast()).container.into()
     }
 
-    pub fn as_builtin_derive_path(self, db: &dyn HirDatabase) -> Option<InMacroFile<ast::Path>> {
-        let src = self.source(db)?;
+    pub fn as_builtin_derive_path<DB: HirDatabase>(
+        self,
+        sema: &Semantics<'_, DB>,
+    ) -> Option<InMacroFile<ast::Path>> {
+        let src = self.source(sema)?;
 
         let macro_file = src.file_id.macro_file()?;
-        let loc = macro_file.macro_call_id.lookup(db.upcast());
+        let loc = macro_file.macro_call_id.lookup(sema.db.upcast());
         let (derive_attr, derive_index) = match loc.kind {
             MacroCallKind::Derive { ast_id, derive_attr_index, derive_index, .. } => {
-                let module_id = self.id.lookup(db.upcast()).container;
+                let module_id = self.id.lookup(sema.db.upcast()).container;
                 (
-                    db.crate_def_map(module_id.krate())[module_id.local_id]
+                    sema.db.crate_def_map(module_id.krate())[module_id.local_id]
                         .scope
                         .derive_macro_invoc(ast_id, derive_attr_index)?,
                     derive_index,
@@ -3820,7 +3823,8 @@ impl Impl {
             _ => return None,
         };
         let file_id = MacroFileId { macro_call_id: derive_attr };
-        let path = db
+        let path = sema
+            .db
             .parse_macro_expansion(file_id)
             .value
             .0

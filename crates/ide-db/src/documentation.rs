@@ -129,7 +129,10 @@ pub fn docs_with_rangemap(
     if buf.is_empty() {
         None
     } else {
-        Some((Documentation(buf), DocsRangeMap { mapping, source_map: attrs.source_map(db) }))
+        Some((
+            Documentation(buf),
+            DocsRangeMap { mapping, source_map: attrs.source_map(db, &mut None) },
+        ))
     }
 }
 

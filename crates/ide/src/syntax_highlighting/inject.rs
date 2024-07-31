@@ -145,7 +145,7 @@ pub(super) fn doc_comment(
     let mut inj = Injector::default();
     inj.add_unmapped("fn doctest() {\n");
 
-    let attrs_source_map = attributes.source_map(sema.db);
+    let attrs_source_map = attributes.source_map(sema.db, &mut None);
 
     let mut is_codeblock = false;
     let mut is_doctest = false;

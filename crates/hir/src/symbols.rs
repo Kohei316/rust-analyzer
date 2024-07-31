@@ -166,7 +166,7 @@ impl<'a> SymbolCollector<'a> {
         // FIXME: In case it imports multiple items under different namespaces we just pick one arbitrarily
         // for now.
         for id in scope.imports() {
-            let source = id.import.child_source(self.db.upcast());
+            let source = id.import.child_source(self.db.upcast(), &mut None);
             let Some(use_tree_src) = source.value.get(id.idx) else { continue };
             let Some(rename) = use_tree_src.rename() else { continue };
             let Some(name) = rename.name() else { continue };
