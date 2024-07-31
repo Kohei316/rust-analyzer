@@ -9,7 +9,7 @@ use std::{
 use hir::{
     db::{DefDatabase, ExpandDatabase, HirDatabase},
     Adt, AssocItem, Crate, DefWithBody, HasSource, HirDisplay, HirFileIdExt, ImportPathConfig,
-    ModuleDef, Name,
+    ModuleDef, Name, Semantics,
 };
 use hir_def::{
     body::{BodySourceMap, SyntheticSyntax},
@@ -370,7 +370,7 @@ impl flags::AnalysisStats {
         let mut sw = self.stop_watch();
 
         for &file_id in &file_ids {
-            let sema = hir::Semantics::new(db);
+            let sema = Semantics::new(db);
             let _ = db.parse(file_id);
 
             let parse = sema.parse(file_id);
@@ -639,13 +639,16 @@ impl flags::AnalysisStats {
                     continue;
                 }
             }
+            let sema = Semantics::new(db);
             let msg = move || {
                 if verbosity.is_verbose() {
                     let source = match body_id {
-                        DefWithBody::Function(it) => it.source(db).map(|it| it.syntax().cloned()),
-                        DefWithBody::Static(it) => it.source(db).map(|it| it.syntax().cloned()),
-                        DefWithBody::Const(it) => it.source(db).map(|it| it.syntax().cloned()),
-                        DefWithBody::Variant(it) => it.source(db).map(|it| it.syntax().cloned()),
+                        DefWithBody::Function(it) => {
+                            it.source(&sema).map(|it| it.syntax().cloned())
+                        }
+                        DefWithBody::Static(it) => it.source(&sema).map(|it| it.syntax().cloned()),
+                        DefWithBody::Const(it) => it.source(&sema).map(|it| it.syntax().cloned()),
+                        DefWithBody::Variant(it) => it.source(&sema).map(|it| it.syntax().cloned()),
                         DefWithBody::InTypeConst(_) => unimplemented!(),
                     };
                     if let Some(src) = source {
@@ -933,13 +936,16 @@ impl flags::AnalysisStats {
                     continue;
                 }
             }
+            let sema = Semantics::new(db);
             let msg = move || {
                 if verbosity.is_verbose() {
                     let source = match body_id {
-                        DefWithBody::Function(it) => it.source(db).map(|it| it.syntax().cloned()),
-                        DefWithBody::Static(it) => it.source(db).map(|it| it.syntax().cloned()),
-                        DefWithBody::Const(it) => it.source(db).map(|it| it.syntax().cloned()),
-                        DefWithBody::Variant(it) => it.source(db).map(|it| it.syntax().cloned()),
+                        DefWithBody::Function(it) => {
+                            it.source(&sema).map(|it| it.syntax().cloned())
+                        }
+                        DefWithBody::Static(it) => it.source(&sema).map(|it| it.syntax().cloned()),
+                        DefWithBody::Const(it) => it.source(&sema).map(|it| it.syntax().cloned()),
+                        DefWithBody::Variant(it) => it.source(&sema).map(|it| it.syntax().cloned()),
                         DefWithBody::InTypeConst(_) => unimplemented!(),
                     };
                     if let Some(src) = source {
