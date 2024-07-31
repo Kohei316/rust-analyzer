@@ -1,6 +1,6 @@
 //! keys to be used with `DynMap`
 
-use std::marker::PhantomData;
+use std::{collections::hash_map::Entry, marker::PhantomData};
 
 use hir_expand::{attrs::AttrId, MacroCallId};
 use rustc_hash::FxHashMap;
@@ -66,6 +66,9 @@ impl<AST: AstNode + 'static, ID: 'static> Policy for AstPtrPolicy<AST, ID> {
     }
     fn get<'a>(map: &'a DynMap, key: &AstPtr<AST>) -> Option<&'a ID> {
         map.map.get::<FxHashMap<AstPtr<AST>, ID>>()?.get(key)
+    }
+    fn entry<'a>(map: &'a mut DynMap, key: Self::K) -> Entry<'a, Self::K, Self::V> {
+        map.map.entry::<FxHashMap<AstPtr<AST>, ID>>().or_insert_with(Default::default).entry(key)
     }
     fn is_empty(map: &DynMap) -> bool {
         map.map.get::<FxHashMap<AstPtr<AST>, ID>>().map_or(true, |it| it.is_empty())
