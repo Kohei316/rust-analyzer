@@ -67,17 +67,20 @@ pub enum HoverAction {
 }
 
 impl HoverAction {
-    fn goto_type_from_targets(db: &RootDatabase, targets: Vec<hir::ModuleDef>) -> Option<Self> {
+    fn goto_type_from_targets(
+        sema: &Semantics<'_, RootDatabase>,
+        targets: Vec<hir::ModuleDef>,
+    ) -> Option<Self> {
         let targets = targets
             .into_iter()
             .filter_map(|it| {
                 Some(HoverGotoTypeData {
                     mod_path: render::path(
-                        db,
-                        it.module(db)?,
-                        it.name(db).map(|name| name.display(db).to_string()),
+                        sema.db,
+                        it.module(sema.db)?,
+                        it.name(sema.db).map(|name| name.display(sema.db).to_string()),
                     ),
-                    nav: it.try_to_nav(db)?.call_site(),
+                    nav: it.try_to_nav(sema)?.call_site(),
                 })
             })
             .collect::<Vec<_>>();
@@ -375,10 +378,10 @@ pub(crate) fn hover_for_definition(
     HoverResult {
         markup: render::process_markup(sema.db, def, &markup, config),
         actions: [
-            show_fn_references_action(sema.db, def),
-            show_implementations_action(sema.db, def),
+            show_fn_references_action(sema, def),
+            show_implementations_action(sema, def),
             runnable_action(sema, def, file_id),
-            goto_type_action_for_def(sema.db, def, &notable_traits),
+            goto_type_action_for_def(sema, def, &notable_traits),
         ]
         .into_iter()
         .flatten()
@@ -412,7 +415,10 @@ fn notable_traits(
         .collect::<Vec<_>>()
 }
 
-fn show_implementations_action(db: &RootDatabase, def: Definition) -> Option<HoverAction> {
+fn show_implementations_action(
+    sema: &Semantics<'_, RootDatabase>,
+    def: Definition,
+) -> Option<HoverAction> {
     fn to_action(nav_target: NavigationTarget) -> HoverAction {
         HoverAction::Implementation(FilePosition {
             file_id: nav_target.file_id,
@@ -422,19 +428,22 @@ fn show_implementations_action(db: &RootDatabase, def: Definition) -> Option<Hov
 
     let adt = match def {
         Definition::Trait(it) => {
-            return it.try_to_nav(db).map(UpmappingResult::call_site).map(to_action)
+            return it.try_to_nav(sema).map(UpmappingResult::call_site).map(to_action)
         }
         Definition::Adt(it) => Some(it),
-        Definition::SelfType(it) => it.self_ty(db).as_adt(),
+        Definition::SelfType(it) => it.self_ty(sema.db).as_adt(),
         _ => None,
     }?;
-    adt.try_to_nav(db).map(UpmappingResult::call_site).map(to_action)
+    adt.try_to_nav(sema).map(UpmappingResult::call_site).map(to_action)
 }
 
-fn show_fn_references_action(db: &RootDatabase, def: Definition) -> Option<HoverAction> {
+fn show_fn_references_action(
+    sema: &Semantics<'_, RootDatabase>,
+    def: Definition,
+) -> Option<HoverAction> {
     match def {
         Definition::Function(it) => {
-            it.try_to_nav(db).map(UpmappingResult::call_site).map(|nav_target| {
+            it.try_to_nav(sema).map(UpmappingResult::call_site).map(|nav_target| {
                 HoverAction::Reference(FilePosition {
                     file_id: nav_target.file_id,
                     offset: nav_target.focus_or_full_range().start(),
@@ -467,7 +476,7 @@ fn runnable_action(
 }
 
 fn goto_type_action_for_def(
-    db: &RootDatabase,
+    sema: &Semantics<'_, RootDatabase>,
     def: Definition,
     notable_traits: &[(hir::Trait, Vec<(Option<hir::Type>, hir::Name)>)],
 ) -> Option<HoverAction> {
@@ -481,32 +490,34 @@ fn goto_type_action_for_def(
     for &(trait_, ref assocs) in notable_traits {
         push_new_def(trait_.into());
         assocs.iter().filter_map(|(ty, _)| ty.as_ref()).for_each(|ty| {
-            walk_and_push_ty(db, ty, &mut push_new_def);
+            walk_and_push_ty(sema.db, ty, &mut push_new_def);
         });
     }
 
     if let Definition::GenericParam(hir::GenericParam::TypeParam(it)) = def {
-        let krate = it.module(db).krate();
-        let sized_trait =
-            db.lang_item(krate.into(), LangItem::Sized).and_then(|lang_item| lang_item.as_trait());
+        let krate = it.module(sema.db).krate();
+        let sized_trait = sema
+            .db
+            .lang_item(krate.into(), LangItem::Sized)
+            .and_then(|lang_item| lang_item.as_trait());
 
-        it.trait_bounds(db)
+        it.trait_bounds(sema.db)
             .into_iter()
             .filter(|&it| Some(it.into()) != sized_trait)
             .for_each(|it| push_new_def(it.into()));
     } else {
         let ty = match def {
-            Definition::Local(it) => it.ty(db),
-            Definition::GenericParam(hir::GenericParam::ConstParam(it)) => it.ty(db),
-            Definition::Field(field) => field.ty(db),
-            Definition::Function(function) => function.ret_type(db),
-            _ => return HoverAction::goto_type_from_targets(db, targets),
+            Definition::Local(it) => it.ty(sema.db),
+            Definition::GenericParam(hir::GenericParam::ConstParam(it)) => it.ty(sema.db),
+            Definition::Field(field) => field.ty(sema.db),
+            Definition::Function(function) => function.ret_type(sema.db),
+            _ => return HoverAction::goto_type_from_targets(sema, targets),
         };
 
-        walk_and_push_ty(db, &ty, &mut push_new_def);
+        walk_and_push_ty(sema.db, &ty, &mut push_new_def);
     }
 
-    HoverAction::goto_type_from_targets(db, targets)
+    HoverAction::goto_type_from_targets(sema, targets)
 }
 
 fn walk_and_push_ty(
