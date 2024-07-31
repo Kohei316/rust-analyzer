@@ -113,7 +113,7 @@ pub(super) fn try_expr(
     };
     walk_and_push_ty(sema.db, &inner_ty, &mut push_new_def);
     walk_and_push_ty(sema.db, &body_ty, &mut push_new_def);
-    if let Some(actions) = HoverAction::goto_type_from_targets(sema.db, targets) {
+    if let Some(actions) = HoverAction::goto_type_from_targets(sema, targets) {
         res.actions.push(actions);
     }
 
@@ -193,7 +193,7 @@ pub(super) fn deref_expr(
         )
         .into()
     };
-    if let Some(actions) = HoverAction::goto_type_from_targets(sema.db, targets) {
+    if let Some(actions) = HoverAction::goto_type_from_targets(sema, targets) {
         res.actions.push(actions);
     }
 
@@ -302,7 +302,7 @@ pub(super) fn struct_rest_pat(
 
         Markup::fenced_block(&s)
     };
-    if let Some(actions) = HoverAction::goto_type_from_targets(sema.db, targets) {
+    if let Some(actions) = HoverAction::goto_type_from_targets(sema, targets) {
         res.actions.push(actions);
     }
     res
@@ -402,42 +402,42 @@ pub(super) fn definition(
     macro_arm: Option<u32>,
     config: &HoverConfig,
 ) -> Markup {
-    let mod_path = definition_mod_path(db, &def);
+    let mod_path = definition_mod_path(sema.db, &def);
     let label = match def {
         Definition::Trait(trait_) => {
-            trait_.display_limited(db, config.max_trait_assoc_items_count).to_string()
+            trait_.display_limited(sema.db, config.max_trait_assoc_items_count).to_string()
         }
         Definition::Adt(adt @ (Adt::Struct(_) | Adt::Union(_))) => {
-            adt.display_limited(db, config.max_fields_count).to_string()
+            adt.display_limited(sema.db, config.max_fields_count).to_string()
         }
         Definition::Variant(variant) => {
-            variant.display_limited(db, config.max_fields_count).to_string()
+            variant.display_limited(sema.db, config.max_fields_count).to_string()
         }
         Definition::Adt(adt @ Adt::Enum(_)) => {
-            adt.display_limited(db, config.max_enum_variants_count).to_string()
+            adt.display_limited(sema.db, config.max_enum_variants_count).to_string()
         }
         Definition::SelfType(impl_def) => {
-            let self_ty = &impl_def.self_ty(db);
+            let self_ty = &impl_def.self_ty(sema.db);
             match self_ty.as_adt() {
-                Some(adt) => adt.display_limited(db, config.max_fields_count).to_string(),
-                None => self_ty.display(db).to_string(),
+                Some(adt) => adt.display_limited(sema.db, config.max_fields_count).to_string(),
+                None => self_ty.display(sema.db).to_string(),
             }
         }
         Definition::Macro(it) => {
-            let mut label = it.display(db).to_string();
+            let mut label = it.display(sema.db).to_string();
             if let Some(macro_arm) = macro_arm {
                 format_to!(label, " // matched arm #{}", macro_arm);
             }
             label
         }
-        Definition::Function(fn_) => fn_.display_with_container_bounds(db, true).to_string(),
-        _ => def.label(db),
+        Definition::Function(fn_) => fn_.display_with_container_bounds(sema.db, true).to_string(),
+        _ => def.label(sema.db),
     };
-    let docs = def.docs(db, famous_defs);
+    let docs = def.docs(sema.db, famous_defs);
     let value = (|| match def {
         Definition::Variant(it) => {
-            if !it.parent_enum(db).is_data_carrying(db) {
-                match it.eval(db) {
+            if !it.parent_enum(sema.db).is_data_carrying(sema.db) {
+                match it.eval(sema.db) {
                     Ok(it) => {
                         Some(if it >= 10 { format!("{it} ({it:#X})") } else { format!("{it}") })
                     }
@@ -448,7 +448,7 @@ pub(super) fn definition(
             }
         }
         Definition::Const(it) => {
-            let body = it.render_eval(db);
+            let body = it.render_eval(sema.db);
             match body {
                 Ok(it) => Some(it),
                 Err(_) => {
@@ -475,12 +475,12 @@ pub(super) fn definition(
     let layout_info = match def {
         Definition::Field(it) => render_memory_layout(
             config.memory_layout,
-            || it.layout(db),
+            || it.layout(sema.db),
             |_| {
-                let var_def = it.parent_def(db);
+                let var_def = it.parent_def(sema.db);
                 match var_def {
                     hir::VariantDef::Struct(s) => {
-                        Adt::from(s).layout(db).ok().and_then(|layout| layout.field_offset(it))
+                        Adt::from(s).layout(sema.db).ok().and_then(|layout| layout.field_offset(it))
                     }
                     _ => None,
                 }
@@ -488,25 +488,31 @@ pub(super) fn definition(
             |_| None,
         ),
         Definition::Adt(it) => {
-            render_memory_layout(config.memory_layout, || it.layout(db), |_| None, |_| None)
+            render_memory_layout(config.memory_layout, || it.layout(sema.db), |_| None, |_| None)
         }
         Definition::Variant(it) => render_memory_layout(
             config.memory_layout,
-            || it.layout(db),
+            || it.layout(sema.db),
             |_| None,
             |layout| layout.enum_tag_size(),
         ),
-        Definition::TypeAlias(it) => {
-            render_memory_layout(config.memory_layout, || it.ty(db).layout(db), |_| None, |_| None)
-        }
-        Definition::Local(it) => {
-            render_memory_layout(config.memory_layout, || it.ty(db).layout(db), |_| None, |_| None)
-        }
+        Definition::TypeAlias(it) => render_memory_layout(
+            config.memory_layout,
+            || it.ty(sema.db).layout(sema.db),
+            |_| None,
+            |_| None,
+        ),
+        Definition::Local(it) => render_memory_layout(
+            config.memory_layout,
+            || it.ty(sema.db).layout(sema.db),
+            |_| None,
+            |_| None,
+        ),
         _ => None,
     };
 
     let mut desc = String::new();
-    if let Some(notable_traits) = render_notable_trait_comment(db, notable_traits) {
+    if let Some(notable_traits) = render_notable_trait_comment(sema.db, notable_traits) {
         desc.push_str(&notable_traits);
         desc.push('\n');
     }
@@ -684,7 +690,7 @@ fn type_info(
         format_to!(desc, "{}", original.display(db));
         Markup::fenced_block(&desc)
     };
-    if let Some(actions) = HoverAction::goto_type_from_targets(db, targets) {
+    if let Some(actions) = HoverAction::goto_type_from_targets(sema, targets) {
         res.actions.push(actions);
     }
     Some(res)
@@ -749,7 +755,7 @@ fn closure_ty(
     );
 
     let mut res = HoverResult::default();
-    if let Some(actions) = HoverAction::goto_type_from_targets(sema.db, targets) {
+    if let Some(actions) = HoverAction::goto_type_from_targets(sema, targets) {
         res.actions.push(actions);
     }
     res.markup = markup.into();
@@ -897,7 +903,7 @@ fn keyword_hints(
                     KeywordHint {
                         description,
                         keyword_mod,
-                        actions: HoverAction::goto_type_from_targets(sema.db, targets)
+                        actions: HoverAction::goto_type_from_targets(sema, targets)
                             .into_iter()
                             .collect(),
                     }
