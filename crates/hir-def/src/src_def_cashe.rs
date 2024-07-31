@@ -17,8 +17,12 @@ pub trait SrcDefCacheContext {
     }
 }
 
+struct DefToSrcCache {
+    dyn_map_cache: DynMap,
+}
+
 pub struct DefToSrcCacheContext<'cache> {
-    cache: &'cache mut DynMap,
+    cache: &'cache mut DefToSrcCache,
 }
 
 impl<'cache> DefToSrcCacheContext<'cache> {
@@ -31,6 +35,6 @@ impl<'cache> DefToSrcCacheContext<'cache> {
         Def: Eq + Hash + 'static,
         Ast: AstNode + 'static,
     {
-        self.cache[map_key].entry(key)
+        self.cache.dyn_map_cache[map_key].entry(key)
     }
 }
